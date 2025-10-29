@@ -38,7 +38,7 @@ library(pdp)
 # )
 
 df_short_merged_with_params = readRDS('/Users/burcutepekule/Desktop/tregs/df_short_merged_with_params.rds')
-df_short_merged_with_params = df_short_merged_with_params %>% dplyr::filter(class_code != '0000')
+
 param_cols = colnames(df_short_merged_with_params)[8:31]
 # Prepare data
 lda_data = df_short_merged_with_params %>%
