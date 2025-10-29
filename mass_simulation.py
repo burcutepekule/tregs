@@ -170,7 +170,7 @@ def run_single_simulation(args):
         return None
 
 
-def run_mass_simulations(n_param_sets, n_replicates=100, n_cores=10,
+def run_mass_simulations(n_param_sets, n_replicates=10, n_cores=10,
                          output_dir='mass_sim_results', base_seed=42,
                          combine_at_end=False):
     """
