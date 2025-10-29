@@ -268,7 +268,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run mass parallel simulations')
     parser.add_argument('--n_param_sets', type=int, default=10,
                        help='Number of parameter sets to sample (default: 10)')
-    parser.add_argument('--n_replicates', type=int, default=100,
+    parser.add_argument('--n_replicates', type=int, default=10,
                        help='Number of replicates per parameter-scenario combo (default: 100)')
     parser.add_argument('--n_cores', type=int, default=min(10, cpu_count()),
                        help='Number of CPU cores to use (default: 10 or max available)')
