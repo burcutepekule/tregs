@@ -34,9 +34,9 @@ def main():
     # Start timer
     start_time = time.time()
     
-    # Run the simulation
+    # Run the simulation with random stream file
     print("\nStarting simulation...")
-    results = run_simulation(params)
+    results = run_simulation(params, random_stream_file='random_numbers_seed_42.txt')
     
     # Calculate runtime
     runtime = time.time() - start_time
