@@ -140,8 +140,8 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
     epithelium_injury[injury_site] = 1
     
     # Initialize phagocytes
-    phagocyte_x = rng.randint(0, grid_size, n_phagocytes)
-    phagocyte_y = rng.randint(1, grid_size, n_phagocytes)  # Not on epithelium row
+    phagocyte_x = rng.choice(grid_size, size=n_phagocytes, replace=True)
+    phagocyte_y = rng.choice(np.arange(1, grid_size), size=n_phagocytes, replace=True)  # Not on epithelium row
     phagocyte_pathogens_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_commensals_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_phenotype = np.zeros(n_phagocytes, dtype=np.int32)  # 0=M0, 1=M1, 2=M2
@@ -151,8 +151,8 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
     phagocyte_bacteria_registry = np.zeros((n_phagocytes, params['cc_phagocyte']), dtype=np.int32)
     
     # Initialize Tregs
-    treg_x = rng.randint(0, grid_size, n_tregs)
-    treg_y = rng.randint(1, grid_size, n_tregs)  # Not on epithelium row
+    treg_x = rng.choice(grid_size, size=n_tregs, replace=True)
+    treg_y = rng.choice(np.arange(1, grid_size), size=n_tregs, replace=True)  # Not on epithelium row
     
     treg_phenotype = np.zeros(n_tregs, dtype=np.int32)  # 0=resting, 1=active
     treg_active_age = np.zeros(n_tregs, dtype=np.int32)
@@ -165,8 +165,8 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
     pathogen_coords = np.column_stack([pathogen_x, pathogen_y]) if n_pathogens_lp > 0 else np.empty((0, 2), dtype=np.int32)
 
     # Commensals start at random positions throughout the grid
-    commensal_x = rng.randint(0, grid_size, params['n_commensals_lp'])
-    commensal_y = rng.randint(0, grid_size, params['n_commensals_lp'])  # Random y position
+    commensal_x = rng.choice(grid_size, size=params['n_commensals_lp'], replace=True)
+    commensal_y = rng.choice(grid_size, size=params['n_commensals_lp'], replace=True)  # Random y position
     commensal_coords = np.column_stack([commensal_x, commensal_y])
     
     # Initialize tracking variables
@@ -374,7 +374,7 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
             
             # Baseline commensals - random locations
             if n_commensals_baseline > 0:
-                baseline_x = rng.randint(0, grid_size, n_commensals_baseline)
+                baseline_x = rng.choice(grid_size, size=n_commensals_baseline, replace=True)
                 new_commensals_x.extend(baseline_x)
 
             # Injury-site commensals - weighted by injury

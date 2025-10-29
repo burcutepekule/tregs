@@ -237,5 +237,6 @@ def sample_beta_from_gamma(alpha, beta):
     x = rng.rgamma(1, shape=alpha, rate=1.0)
     y = rng.rgamma(1, shape=beta, rate=1.0)
 
-    # Beta is the ratio
-    return x / (x + y)
+    # Beta is the ratio - extract scalar from array
+    result = x / (x + y)
+    return float(result[0]) if hasattr(result, '__len__') else float(result)
