@@ -10,8 +10,7 @@ from time import time
 from simulation_utils import *
 import numba
 
-# Set random seed for reproducibility at module level
-np.random.seed(42)
+# Note: Random seed is now managed by RandomStream class
 
 def initialize_parameters():
     """Initialize all simulation parameterss."""
@@ -104,11 +103,12 @@ def initialize_parameters():
     return params
 
 
-def run_simulation(params, random_seed=42):
+def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
     """Run the main ABM simulation."""
-    
-    # Set random seed for reproducibility
-    np.random.seed(random_seed)
+
+    # Initialize random stream from file (matching R's approach)
+    rng = initialize_random_stream(random_stream_file)
+    print(f"Random stream initialized with {len(rng.stream) if rng.stream is not None else 0} values")
     
     # Extract frequently used parameters
     grid_size = params['grid_size']
@@ -140,8 +140,8 @@ def run_simulation(params, random_seed=42):
     epithelium_injury[injury_site] = 1
     
     # Initialize phagocytes
-    phagocyte_x = np.random.randint(0, grid_size, n_phagocytes)
-    phagocyte_y = np.random.randint(1, grid_size, n_phagocytes)  # Not on epithelium row
+    phagocyte_x = rng.choice(grid_size, size=n_phagocytes, replace=True)
+    phagocyte_y = rng.choice(np.arange(1, grid_size), size=n_phagocytes, replace=True)  # Not on epithelium row
     phagocyte_pathogens_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_commensals_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_phenotype = np.zeros(n_phagocytes, dtype=np.int32)  # 0=M0, 1=M1, 2=M2
@@ -151,22 +151,22 @@ def run_simulation(params, random_seed=42):
     phagocyte_bacteria_registry = np.zeros((n_phagocytes, params['cc_phagocyte']), dtype=np.int32)
     
     # Initialize Tregs
-    treg_x = np.random.randint(0, grid_size, n_tregs)
-    treg_y = np.random.randint(1, grid_size, n_tregs)  # Not on epithelium row
+    treg_x = rng.choice(grid_size, size=n_tregs, replace=True)
+    treg_y = rng.choice(np.arange(1, grid_size), size=n_tregs, replace=True)  # Not on epithelium row
     
     treg_phenotype = np.zeros(n_tregs, dtype=np.int32)  # 0=resting, 1=active
     treg_active_age = np.zeros(n_tregs, dtype=np.int32)
     treg_activity_SAMPs_binary = np.zeros(n_tregs, dtype=np.int32)
     
     # Initialize bacteria coordinates
-    # Pathogens start at y=1 (one row above epithelium which is at y=0)
-    pathogen_x = np.random.choice(injury_site, n_pathogens_lp, replace=True) if n_pathogens_lp > 0 else np.array([])
-    pathogen_y = np.zeros(n_pathogens_lp, dtype=np.int32)  
+    # Pathogens start at y=0 (epithelium row in Python's 0-indexed system, matches R's y=1)
+    pathogen_x = rng.choice(injury_site, size=n_pathogens_lp, replace=True) if n_pathogens_lp > 0 else np.array([])
+    pathogen_y = np.zeros(n_pathogens_lp, dtype=np.int32)  # y=0 (epithelium row)
     pathogen_coords = np.column_stack([pathogen_x, pathogen_y]) if n_pathogens_lp > 0 else np.empty((0, 2), dtype=np.int32)
-    
+
     # Commensals start at random positions throughout the grid
-    commensal_x = np.random.randint(0, grid_size, params['n_commensals_lp'])
-    commensal_y = np.random.randint(0, grid_size, params['n_commensals_lp'])  # Random y position
+    commensal_x = rng.choice(grid_size, size=params['n_commensals_lp'], replace=True)
+    commensal_y = rng.choice(grid_size, size=params['n_commensals_lp'], replace=True)  # Random y position
     commensal_coords = np.column_stack([commensal_x, commensal_y])
     
     # Initialize tracking variables
@@ -208,16 +208,16 @@ def run_simulation(params, random_seed=42):
             # When at y=0 (touching epithelium), can only move to LP (dy=1), not lumen
             dy = np.where(pathogen_coords[:, 1] == 0,
                           np.ones(len(pathogen_coords), dtype=np.int32),  # Must move up
-                          np.random.choice([-1, 0, 1], size=len(pathogen_coords), replace=True))  # Random movement
+                          rng.choice([-1, 0, 1], size=len(pathogen_coords), replace=True))  # Random movement
             dx = iszero_coordinates(dy)
             pathogen_coords[:, 0] = np.clip(pathogen_coords[:, 0] + dx, 0, grid_size - 1)
             pathogen_coords[:, 1] = np.clip(pathogen_coords[:, 1] + dy, 0, grid_size - 1)
-            
+
         if len(commensal_coords) > 0:
-            # When at y=0 (touching epithelium), can only move uLP (dy=1), not lumen
+            # When at y=0 (touching epithelium), can only move to LP (dy=1), not lumen
             dy = np.where(commensal_coords[:, 1] == 0,
                           np.ones(len(commensal_coords), dtype=np.int32),  # Must move up
-                          np.random.choice([-1, 0, 1], size=len(commensal_coords), replace=True))  # Random movement
+                          rng.choice([-1, 0, 1], size=len(commensal_coords), replace=True))  # Random movement
             dx = iszero_coordinates(dy)
             commensal_coords[:, 0] = np.clip(commensal_coords[:, 0] + dx, 0, grid_size - 1)
             commensal_coords[:, 1] = np.clip(commensal_coords[:, 1] + dy, 0, grid_size - 1)
@@ -276,8 +276,8 @@ def run_simulation(params, random_seed=42):
                 neighbors_y = []
                 neighbor_density = []
                 
-                for nx in range(x_start, x_end):
-                    for ny in range(y_start, y_end):
+                for ny in range(y_start, y_end):
+                    for nx in range(x_start, x_end):
                         neighbors_x.append(nx)
                         neighbors_y.append(ny)
                         neighbor_density.append(density_matrix_tregs[ny, nx])
@@ -290,14 +290,14 @@ def run_simulation(params, random_seed=42):
                     probs = np.ones(len(neighbor_density)) / len(neighbor_density)
                 
                 # Sample weighted by density concentration
-                chosen_idx = np.random.choice(len(neighbors_x), p=probs)
+                chosen_idx = rng.choice(len(neighbors_x), replace=True, p=probs)
                 treg_x[i] = neighbors_x[chosen_idx]
                 treg_y[i] = neighbors_y[chosen_idx]
         else:
             # Random movement if no gradient
             dy = np.where(treg_y == 0,
                  np.ones(len(treg_y), dtype=np.int32),  # Must move up
-                 np.random.choice([-1, 0, 1], size=len(treg_y), replace=True))
+                 rng.choice([-1, 0, 1], size=len(treg_y), replace=True))
                         
             dx = iszero_coordinates(dy)
             treg_x = np.clip(treg_x + dx, 0, grid_size - 1)
@@ -335,14 +335,14 @@ def run_simulation(params, random_seed=42):
                     probs = np.ones(len(neighbor_damps)) / len(neighbor_damps)
                 
                 # Sample weighted by DAMP concentration
-                chosen_idx = np.random.choice(len(neighbors_x), p=probs)
+                chosen_idx = rng.choice(len(neighbors_x), replace=True, p=probs)
                 phagocyte_x[i] = neighbors_x[chosen_idx]
                 phagocyte_y[i] = neighbors_y[chosen_idx]
         else:
             # Random movement if no gradient
             dy = np.where(phagocyte_y == 0,
                  np.ones(len(phagocyte_y), dtype=np.int32),  # Must move up
-                 np.random.choice([-1, 0, 1], size=len(phagocyte_y), replace=True))
+                 rng.choice([-1, 0, 1], size=len(phagocyte_y), replace=True))
                         
             dx = iszero_coordinates(dy)
             phagocyte_x = np.clip(phagocyte_x + dx, 0, grid_size - 1)
@@ -361,10 +361,8 @@ def run_simulation(params, random_seed=42):
             if n_pathogens_new > 0:
                 # Sample locations weighted by injury level
                 probs = epithelium_injury / epithelium_injury.sum() if epithelium_injury.sum() > 0 else None
-                new_x = np.random.choice(grid_size, n_pathogens_new, replace=True, p=probs)
-                new_pathogens = np.column_stack([
-                    new_x, 
-                    np.zeros(n_pathogens_new, dtype=np.int32)])
+                new_x = rng.choice(grid_size, size=n_pathogens_new, replace=True, p=probs)
+                new_pathogens = np.column_stack([new_x, np.zeros(n_pathogens_new, dtype=np.int32)])  # Spawn at y=0
                 pathogen_coords = np.vstack([pathogen_coords, new_pathogens]) if len(pathogen_coords) > 0 else new_pathogens
         
         # Commensals leak from both injury and baseline
@@ -376,19 +374,19 @@ def run_simulation(params, random_seed=42):
             
             # Baseline commensals - random locations
             if n_commensals_baseline > 0:
-                baseline_x = np.random.randint(0, grid_size, n_commensals_baseline)
+                baseline_x = rng.choice(grid_size, size=n_commensals_baseline, replace=True)
                 new_commensals_x.extend(baseline_x)
-            
+
             # Injury-site commensals - weighted by injury
             if n_commensals_injury > 0:
                 probs = epithelium_injury / epithelium_injury.sum() if epithelium_injury.sum() > 0 else None
-                injury_x = np.random.choice(grid_size, n_commensals_injury, replace=True, p=probs)
+                injury_x = rng.choice(grid_size, size=n_commensals_injury, replace=True, p=probs)
                 new_commensals_x.extend(injury_x)
-            
+
             if len(new_commensals_x) > 0:
                 new_commensals = np.column_stack([
                     np.array(new_commensals_x),
-                    np.zeros(len(new_commensals_x), dtype=np.int32)
+                    np.zeros(len(new_commensals_x), dtype=np.int32)  # Spawn at y=0
                 ])
                 commensal_coords = np.vstack([commensal_coords, new_commensals]) if len(commensal_coords) > 0 else new_commensals
         
@@ -482,7 +480,7 @@ def run_simulation(params, random_seed=42):
             if len(pathogen_coords) > 0:
                 pathogen_indices = np.where((pathogen_coords[:, 0] == px) & (pathogen_coords[:, 1] == py))[0]
                 if len(pathogen_indices) > 0:
-                    engulf_success = np.random.rand(len(pathogen_indices)) < phagocyte_activity_engulf[i]
+                    engulf_success = rng.runif(len(pathogen_indices)) < phagocyte_activity_engulf[i]
                     indices_to_engulf = pathogen_indices[engulf_success]
 
                     if len(indices_to_engulf) > 0:
@@ -505,7 +503,7 @@ def run_simulation(params, random_seed=42):
             if len(commensal_coords) > 0:
                 commensal_indices = np.where((commensal_coords[:, 0] == px) & (commensal_coords[:, 1] == py))[0]
                 if len(commensal_indices) > 0:
-                    engulf_success = np.random.rand(len(commensal_indices)) < phagocyte_activity_engulf[i]
+                    engulf_success = rng.runif(len(commensal_indices)) < phagocyte_activity_engulf[i]
                     indices_to_engulf = commensal_indices[engulf_success]
                     
                     if len(indices_to_engulf) > 0:
@@ -550,7 +548,7 @@ def run_simulation(params, random_seed=42):
                             # This is the same for every Treg, not individualized
                             alpha = (1 - params['treg_discrimination_efficiency']) + params['treg_discrimination_efficiency'] * (rat_com_pat_real * precision)
                             beta = (1 - params['treg_discrimination_efficiency']) + params['treg_discrimination_efficiency'] * ((1 - rat_com_pat_real) * precision)
-                            rat_com_pat = sample_beta_numba(alpha, beta)
+                            rat_com_pat = sample_beta_from_gamma(alpha, beta)
                             
                             if rat_com_pat > params['rat_com_pat_threshold']:
                                 # Activate ALL nearby Tregs at once (like in R code)
@@ -618,7 +616,7 @@ def run_simulation(params, random_seed=42):
             epithelium_injury[i] = min(epithelium_injury[i], params['max_level_injury'])
             
             # Stochastic recovery
-            if epithelium_injury[i] > 0 and np.random.random() < params['epith_recovery_chance']:
+            if epithelium_injury[i] > 0 and rng.runif(1) < params['epith_recovery_chance']:
                 epithelium_injury[i] = max(0, epithelium_injury[i] - 1)
         
         # Save longitudinal data
@@ -778,29 +776,30 @@ def plot_results(df):
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('/Users/burcutepekule/Desktop/tregs/simulation_results_py.png', dpi=150, bbox_inches='tight')
+    plt.savefig('simulation_results.png', dpi=150, bbox_inches='tight')
     #plt.show()
     
-    print("Plots saved to simulation_results_py.png")
+    print("Plots saved to simulation_results.png")
 
 
 if __name__ == "__main__":
     # Start timer
     start_time = time()
-    
+
     # Initialize parameters
     params = initialize_parameters()
-    
-    # Run simulation
-    results_df = run_simulation(params)
+
+    # Run simulation with random stream file
+    # Set to None to use numpy's default RNG instead
+    results_df = run_simulation(params, random_stream_file='random_numbers_seed_42.txt')
     
     # Calculate runtime
     runtime = time() - start_time
     print(f"\nSimulation runtime: {runtime:.2f} seconds")
     
     # Save results
-    results_df.to_csv('/Users/burcutepekule/Desktop/tregs/simulation_results_py.csv', index=False)
-    print("Results saved to simulation_results_py.csv")
+    results_df.to_csv('simulation_results.csv', index=False)
+    print("Results saved to simulation_results.csv")
     
     # Create plots
     plot_results(results_df)

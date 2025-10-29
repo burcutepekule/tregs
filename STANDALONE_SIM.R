@@ -963,3 +963,17 @@ print(p_phagocytes)
 p_results = read.csv('/Users/burcutepekule/Dropbox/Treg_problem_v2/python/simulation_results.csv')
 p_results = p_results %>% dplyr::mutate(t=t+1)
 
+library(cowplot)
+
+# Basic 2x2 grid
+p_all=plot_grid(p_epithelium, 
+          p_microbes, 
+          p_phagocytes, 
+          p_tregs, 
+          ncol = 2, 
+          nrow = 2)
+ggsave("/Users/burcutepekule/Desktop/tregs/simulation_results_R.png", 
+       plot = p_all,
+       width = 10,     # width in inches
+       height = 8,     # height in inches
+       dpi = 300)      # resolution (dots per inch)
