@@ -480,74 +480,59 @@ def run_simulation(params, random_seed=42):
                 treg_active_age[old_tregs] = 0
                 treg_activity_SAMPs_binary[old_tregs] = 0
         
-        # Phagocyte engulfment of bacteria (OPTIMIZED WITH SPATIAL HASHING)
-        # Build spatial hash for bacteria locations
-        pathogen_to_remove = []
-        commensal_to_remove = []
+        # Phagocyte engulfment of bacteria (OPTIMIZED - registry shift only)
+        for i in range(n_phagocytes):
+            px, py = phagocyte_x[i], phagocyte_y[i]
 
-        if len(pathogen_coords) > 0 or len(commensal_coords) > 0:
-            # Create grid lookup for pathogens
-            pathogen_grid = {}
+            # Check for pathogens at this location
             if len(pathogen_coords) > 0:
-                for idx, (x, y) in enumerate(pathogen_coords):
-                    key = (x, y)
-                    if key not in pathogen_grid:
-                        pathogen_grid[key] = []
-                    pathogen_grid[key].append(idx)
-
-            # Create grid lookup for commensals
-            commensal_grid = {}
-            if len(commensal_coords) > 0:
-                for idx, (x, y) in enumerate(commensal_coords):
-                    key = (x, y)
-                    if key not in commensal_grid:
-                        commensal_grid[key] = []
-                    commensal_grid[key].append(idx)
-
-            # Process engulfment
-            for i in range(n_phagocytes):
-                px, py = phagocyte_x[i], phagocyte_y[i]
-                key = (px, py)
-
-                # Check for pathogens at this location
-                if key in pathogen_grid:
-                    pathogen_indices = pathogen_grid[key]
+                pathogen_indices = np.where((pathogen_coords[:, 0] == px) & (pathogen_coords[:, 1] == py))[0]
+                if len(pathogen_indices) > 0:
                     engulf_success = np.random.rand(len(pathogen_indices)) < phagocyte_activity_engulf[i]
-                    indices_to_engulf = [pathogen_indices[j] for j in range(len(pathogen_indices)) if engulf_success[j]]
+                    indices_to_engulf = pathogen_indices[engulf_success]
 
                     if len(indices_to_engulf) > 0:
-                        pathogen_to_remove.extend(indices_to_engulf)
+                        # Update counters
                         phagocyte_pathogens_engulfed[i] += len(indices_to_engulf)
 
-                        # Update registry - optimized shift
-                        n_engulf = len(indices_to_engulf)
-                        phagocyte_bacteria_registry[i, n_engulf:] = phagocyte_bacteria_registry[i, :-n_engulf]
-                        phagocyte_bacteria_registry[i, :n_engulf] = 1
+                        # Remove engulfed pathogens IMMEDIATELY (preserves order)
+                        pathogen_coords = np.delete(pathogen_coords, indices_to_engulf, axis=0)
 
+                        # Update registry - OPTIMIZED shift (batch instead of loop)
+                        n_engulf = len(indices_to_engulf)
+                        if n_engulf < params['cc_phagocyte']:
+                            phagocyte_bacteria_registry[i, n_engulf:] = phagocyte_bacteria_registry[i, :-n_engulf]
+                            phagocyte_bacteria_registry[i, :n_engulf] = 1
+                        else:
+                            phagocyte_bacteria_registry[i, :] = 1
+
+                        # Update kill count by phagocyte phenotype
                         pathogens_killed_by_Mac[phagocyte_phenotype[i]] += len(indices_to_engulf)
 
-                # Check for commensals at this location
-                if key in commensal_grid:
-                    commensal_indices = commensal_grid[key]
+            # Check for commensals at this location
+            if len(commensal_coords) > 0:
+                commensal_indices = np.where((commensal_coords[:, 0] == px) & (commensal_coords[:, 1] == py))[0]
+                if len(commensal_indices) > 0:
                     engulf_success = np.random.rand(len(commensal_indices)) < phagocyte_activity_engulf[i]
-                    indices_to_engulf = [commensal_indices[j] for j in range(len(commensal_indices)) if engulf_success[j]]
+                    indices_to_engulf = commensal_indices[engulf_success]
 
                     if len(indices_to_engulf) > 0:
-                        commensal_to_remove.extend(indices_to_engulf)
+                        # Update counters
                         phagocyte_commensals_engulfed[i] += len(indices_to_engulf)
 
-                        # Update registry - optimized shift
+                        # Remove engulfed commensals IMMEDIATELY (preserves order)
+                        commensal_coords = np.delete(commensal_coords, indices_to_engulf, axis=0)
+
+                        # Update registry - OPTIMIZED shift (batch instead of loop)
                         n_engulf = len(indices_to_engulf)
-                        phagocyte_bacteria_registry[i, n_engulf:] = phagocyte_bacteria_registry[i, :-n_engulf]
-                        phagocyte_bacteria_registry[i, :n_engulf] = 1
+                        if n_engulf < params['cc_phagocyte']:
+                            phagocyte_bacteria_registry[i, n_engulf:] = phagocyte_bacteria_registry[i, :-n_engulf]
+                            phagocyte_bacteria_registry[i, :n_engulf] = 1
+                        else:
+                            phagocyte_bacteria_registry[i, :] = 1
 
+                        # Update kill count by phagocyte phenotype
                         commensals_killed_by_Mac[phagocyte_phenotype[i]] += len(indices_to_engulf)
-
-        # Remove engulfed bacteria (done in batch for efficiency)
-        if len(pathogen_to_remove) > 0:
-            pathogen_coords = np.delete(pathogen_coords, pathogen_to_remove, axis=0)
-        if len(commensal_to_remove) > 0:
-            commensal_coords = np.delete(commensal_coords, commensal_to_remove, axis=0)
                 
         # Treg activation
         if params['allow_tregs_to_do_their_job'] == 1:
@@ -641,31 +626,27 @@ def run_simulation(params, random_seed=42):
                 unique, counts = np.unique(epithelium_commensals[:, 0], return_counts=True)
                 commensal_epithelium_counts[unique] = counts
         
-        # Epithelium injury updates (OPTIMIZED - vectorized)
-        rad = params['act_radius_ROS']
-        mean_ros_array = np.zeros(grid_size)
-
+        # Epithelium injury updates (SAFE - preserves RNG order)
         for i in range(grid_size):
-            x_start = max(0, i - rad)
-            x_end = min(grid_size, i + rad + 1)
-            mean_ros_array[i] = np.mean(ROS[0, x_start:x_end])
+            # Get ROS in vicinity from row y=0 (epithelium row)
+            x_start = max(0, i - params['act_radius_ROS'])
+            x_end = min(grid_size, i + params['act_radius_ROS'] + 1)
+            mean_ros = np.mean(ROS[0, x_start:x_end])
 
-        # Injury from pathogens (vectorized)
-        pathogen_injury = logistic_scaled_0_to_5_quantized(pathogen_epithelium_counts, params['k_in'], params['x0_in']).astype(np.int32)
-        epithelium_injury += pathogen_injury
+            # Increase injury from pathogens
+            count_pathogens = pathogen_epithelium_counts[i]
+            epithelium_injury[i] += int(logistic_scaled_0_to_5_quantized(count_pathogens, params['k_in'], params['x0_in']))
 
-        # Injury from ROS (vectorized)
-        ros_injury_mask = mean_ros_array > params['th_ROS_epith_recover']
-        epithelium_injury[ros_injury_mask] += 1
+            # Increase injury from ROS
+            if mean_ros > params['th_ROS_epith_recover']:
+                epithelium_injury[i] += 1
 
-        # Cap at maximum (vectorized)
-        epithelium_injury = np.minimum(epithelium_injury, params['max_level_injury'])
+            # Cap at maximum
+            epithelium_injury[i] = min(epithelium_injury[i], params['max_level_injury'])
 
-        # Stochastic recovery (vectorized)
-        injured_mask = epithelium_injury > 0
-        recovery_roll = np.random.random(grid_size) < params['epith_recovery_chance']
-        recovery_mask = injured_mask & recovery_roll
-        epithelium_injury[recovery_mask] = np.maximum(0, epithelium_injury[recovery_mask] - 1)
+            # Stochastic recovery (MUST call RNG in loop to preserve order)
+            if epithelium_injury[i] > 0 and np.random.random() < params['epith_recovery_chance']:
+                epithelium_injury[i] = max(0, epithelium_injury[i] - 1)
         
         # Save longitudinal data
         epithelium_counts = np.bincount(epithelium_injury, minlength=6)[:6]
