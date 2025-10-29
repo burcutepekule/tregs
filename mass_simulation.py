@@ -172,7 +172,7 @@ def run_single_simulation(args):
 
 def run_mass_simulations(n_param_sets, n_replicates=100, n_cores=10,
                          output_dir='mass_sim_results', base_seed=42,
-                         combine_at_end=True):
+                         combine_at_end=False):
     """
     Main function to run mass parallel simulations.
     Saves results incrementally per parameter set for safety.
@@ -330,8 +330,8 @@ def main():
                        help='Output directory (default: mass_sim_results)')
     parser.add_argument('--base_seed', type=int, default=42,
                        help='Base random seed (default: 42)')
-    parser.add_argument('--no-combine', action='store_true',
-                       help='Skip combining files at the end (saves time)')
+    parser.add_argument('--combine', action='store_true',
+                       help='Combine all param_set files into single file at end (requires memory)')
 
     args = parser.parse_args()
 
@@ -342,7 +342,7 @@ def main():
         n_cores=args.n_cores,
         output_dir=args.output_dir,
         base_seed=args.base_seed,
-        combine_at_end=not args.no_combine
+        combine_at_end=args.combine
     )
 
 

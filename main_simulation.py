@@ -189,9 +189,6 @@ def run_simulation(params, random_seed=42):
     
     # Main simulation loop
     for t in range(t_max):
-        if t % 100 == 0:
-            print(f"Time step {t}/{t_max}")
-        
         # Update SAMPs based on activated tregs (VECTORIZED)
         active_tregs_mask = treg_activity_SAMPs_binary == 1
         if np.any(active_tregs_mask):
