@@ -14,7 +14,7 @@ import numba
 np.random.seed(42)
 
 def initialize_parameters():
-    """Initialize all simulation parameters."""
+    """Initialize all simulation parameterss."""
     params = {}
     
     # Grid parameters
@@ -144,10 +144,8 @@ def run_simulation(params, random_seed=42):
     phagocyte_y = np.random.randint(1, grid_size, n_phagocytes)  # Not on epithelium row
     phagocyte_pathogens_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_commensals_engulfed = np.zeros(n_phagocytes, dtype=np.int32)
-    phagocyte_num_times_activated = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_phenotype = np.zeros(n_phagocytes, dtype=np.int32)  # 0=M0, 1=M1, 2=M2
     phagocyte_active_age = np.zeros(n_phagocytes, dtype=np.int32)
-    phagocyte_digestion_counter = np.zeros(n_phagocytes, dtype=np.int32)
     phagocyte_activity_engulf = np.full(n_phagocytes, params['activity_engulf_M0_baseline'], dtype=np.float32)
     phagocyte_activity_ROS = np.full(n_phagocytes, params['activity_ROS_M0_baseline'], dtype=np.float32)
     phagocyte_bacteria_registry = np.zeros((n_phagocytes, params['cc_phagocyte']), dtype=np.int32)
@@ -176,6 +174,8 @@ def run_simulation(params, random_seed=42):
     pathogens_killed_by_Mac = 0
     commensals_killed_by_ROS = 0
     commensals_killed_by_Mac = 0
+    pathogens_killed_by_Mac = np.zeros(3, dtype=np.int32)  # M0, M1, M2
+    commensals_killed_by_Mac = np.zeros(3, dtype=np.int32)  # M0, M1, M2
     
     # Initialize data storage matrices
     epithelium_longitudinal = np.zeros((t_max, 6), dtype=np.int32)
@@ -209,7 +209,7 @@ def run_simulation(params, random_seed=42):
             dy = np.where(pathogen_coords[:, 1] == 0,
                           np.ones(len(pathogen_coords), dtype=np.int32),  # Must move up
                           np.random.choice([-1, 0, 1], size=len(pathogen_coords), replace=True))  # Random movement
-            dx = iszero_coordinates(pathogen_coords[:, 0])
+            dx = iszero_coordinates(dy)
             pathogen_coords[:, 0] = np.clip(pathogen_coords[:, 0] + dx, 0, grid_size - 1)
             pathogen_coords[:, 1] = np.clip(pathogen_coords[:, 1] + dy, 0, grid_size - 1)
             
@@ -218,7 +218,7 @@ def run_simulation(params, random_seed=42):
             dy = np.where(commensal_coords[:, 1] == 0,
                           np.ones(len(commensal_coords), dtype=np.int32),  # Must move up
                           np.random.choice([-1, 0, 1], size=len(commensal_coords), replace=True))  # Random movement
-            dx = iszero_coordinates(commensal_coords[:, 0])
+            dx = iszero_coordinates(dy)
             commensal_coords[:, 0] = np.clip(commensal_coords[:, 0] + dx, 0, grid_size - 1)
             commensal_coords[:, 1] = np.clip(commensal_coords[:, 1] + dy, 0, grid_size - 1)
         
@@ -356,7 +356,8 @@ def run_simulation(params, random_seed=42):
         if len(injured_sites) > 0:
             mean_injury = np.mean(epithelium_injury)
             n_pathogens_new = int(np.round(mean_injury * params['rate_leak_pathogen_injury'] * len(injured_sites)))
-            
+            n_commensals_injury = int(np.round(mean_injury * params['rate_leak_commensal_injury'] * len(injured_sites)))
+
             if n_pathogens_new > 0:
                 # Sample locations weighted by injury level
                 probs = epithelium_injury / epithelium_injury.sum() if epithelium_injury.sum() > 0 else None
@@ -365,8 +366,6 @@ def run_simulation(params, random_seed=42):
                 pathogen_coords = np.vstack([pathogen_coords, new_pathogens]) if len(pathogen_coords) > 0 else new_pathogens
         
         # Commensals leak from both injury and baseline
-        mean_injury = np.mean(epithelium_injury)
-        n_commensals_injury = int(np.round(mean_injury * params['rate_leak_commensal_injury'] * len(injured_sites)))
         n_commensals_baseline = int(np.round(params['rate_leak_commensal_baseline'] * grid_size))
         total_new_commensals = n_commensals_injury + n_commensals_baseline
         
@@ -473,47 +472,56 @@ def run_simulation(params, random_seed=42):
                 treg_active_age[old_tregs] = 0
                 treg_activity_SAMPs_binary[old_tregs] = 0
         
-
-        # Process active phagocytes for engulfment and check aged ones for state transitions
-        all_indices = np.where(np.isin(phagocyte_phenotype, [0, 1, 2]))[0]
-        
-        for i in all_indices:
+        # Phagocyte engulfment of bacteria      
+        for i in range(n_phagocytes):
             px, py = phagocyte_x[i], phagocyte_y[i]
             
-            pathogen_indices = np.where((pathogen_coords[:, 0] == px) & (pathogen_coords[:, 1] == py))[0]
-            if len(pathogen_indices) > 0:
-                engulf_success = np.random.rand(len(pathogen_indices)) < phagocyte_activity_engulf[i]
-                indices_to_engulf = np.array(pathogen_indices)[engulf_success]
-    
-                if len(indices_to_engulf) > 0:
-                    # Update counters
-                    phagocyte_pathogens_engulfed[i] += len(indices_to_engulf)
-                    pathogens_killed_by_Mac += len(indices_to_engulf)
-                    # Remove all engulfed pathogens at once
-                    pathogen_coords = np.delete(pathogen_coords, indices_to_engulf, axis=0)
+            # Check for pathogens at this location
+            if len(pathogen_coords) > 0:
+                pathogen_indices = np.where((pathogen_coords[:, 0] == px) & (pathogen_coords[:, 1] == py))[0]
+                if len(pathogen_indices) > 0:
+                    engulf_success = np.random.rand(len(pathogen_indices)) < phagocyte_activity_engulf[i]
+                    indices_to_engulf = pathogen_indices[engulf_success]
 
-                    # Update registry
-                    bacteria_count = np.sum(phagocyte_bacteria_registry[i, :] > 0)
-                    n_insert = min(len(indices_to_engulf), params['cc_phagocyte'] - bacteria_count)
-                    phagocyte_bacteria_registry[i, bacteria_count:bacteria_count+n_insert] = 2
+                    if len(indices_to_engulf) > 0:
+                        # Update counters
+                        phagocyte_pathogens_engulfed[i] += len(indices_to_engulf)
+                        
+                        # Remove engulfed pathogens
+                        pathogen_coords = np.delete(pathogen_coords, indices_to_engulf, axis=0)
 
-            commensal_indices = np.where((commensal_coords[:, 0] == px) & (commensal_coords[:, 1] == py))[0]
-            if len(commensal_indices) > 0:
-                engulf_success = np.random.rand(len(commensal_indices)) < phagocyte_activity_engulf[i]
-                indices_to_engulf = np.array(commensal_indices)[engulf_success]
+                        # Update registry - shift and insert 1's at beginning
+                        for _ in range(len(indices_to_engulf)):
+                            phagocyte_bacteria_registry[i, 1:] = phagocyte_bacteria_registry[i, :-1]
+                            phagocyte_bacteria_registry[i, 0] = 1  # Just 1 for any bacterium
+                        
+                        # Update kill count by phagocyte phenotype (note: R uses +1 offset)
+                        phagocyte_phenotype_index = phagocyte_phenotype[i]  # 0=M0, 1=M1, 2=M2
+                        pathogens_killed_by_Mac[phagocyte_phenotype_index] += len(indices_to_engulf)
+
+            # Check for commensals at this location  
+            if len(commensal_coords) > 0:
+                commensal_indices = np.where((commensal_coords[:, 0] == px) & (commensal_coords[:, 1] == py))[0]
+                if len(commensal_indices) > 0:
+                    engulf_success = np.random.rand(len(commensal_indices)) < phagocyte_activity_engulf[i]
+                    indices_to_engulf = commensal_indices[engulf_success]
+                    
+                    if len(indices_to_engulf) > 0:
+                        # Update counters
+                        phagocyte_commensals_engulfed[i] += len(indices_to_engulf)
+                        
+                        # Remove engulfed commensals
+                        commensal_coords = np.delete(commensal_coords, indices_to_engulf, axis=0)
+
+                        # Update registry - shift and insert 1's at beginning
+                        for _ in range(len(indices_to_engulf)):
+                            phagocyte_bacteria_registry[i, 1:] = phagocyte_bacteria_registry[i, :-1]
+                            phagocyte_bacteria_registry[i, 0] = 1  # Just 1 for any bacterium
+                        
+                        # Update kill count by phagocyte phenotype
+                        phagocyte_phenotype_index = phagocyte_phenotype[i]
+                        commensals_killed_by_Mac[phagocyte_phenotype_index] += len(indices_to_engulf)
                 
-                if len(indices_to_engulf) > 0:
-                    # Update counters
-                    phagocyte_commensals_engulfed[i] += len(indices_to_engulf)
-                    commensals_killed_by_Mac += len(indices_to_engulf)
-                    # Remove all engulfed pathogens at once
-                    commensal_coords = np.delete(commensal_coords, indices_to_engulf, axis=0)
-
-                    # Update registry
-                    bacteria_count = np.sum(phagocyte_bacteria_registry[i, :] > 0)
-                    n_insert = min(len(indices_to_engulf), params['cc_phagocyte'] - bacteria_count)
-                    phagocyte_bacteria_registry[i, bacteria_count:bacteria_count+n_insert] = 2
-        
         # Treg activation
         if params['allow_tregs_to_do_their_job'] == 1:
             for i in range(n_phagocytes):
@@ -573,7 +581,7 @@ def run_simulation(params, random_seed=42):
             commensals_killed_by_ROS += killed
             commensal_coords = commensal_coords[survivors]
         
-        # Injure epithelium
+        # # Injure epithelium
         pathogen_epithelium_counts = np.zeros(grid_size, dtype=np.int32)
         if len(pathogen_coords) > 0:
             # Bacteria at y=0 are touching the epithelium
@@ -581,6 +589,14 @@ def run_simulation(params, random_seed=42):
             if len(epithelium_pathogens) > 0:
                 unique, counts = np.unique(epithelium_pathogens[:, 0], return_counts=True)
                 pathogen_epithelium_counts[unique] = counts
+                
+        commensal_epithelium_counts = np.zeros(grid_size, dtype=np.int32)
+        if len(commensal_coords) > 0:
+            # Bacteria at y=0 are touching the epithelium
+            epithelium_commensals = commensal_coords[commensal_coords[:, 1] == 0]
+            if len(epithelium_commensals) > 0:
+                unique, counts = np.unique(epithelium_commensals[:, 0], return_counts=True)
+                commensal_epithelium_counts[unique] = counts
         
         for i in range(grid_size):
             # Get ROS in vicinity from row y=1 (above epithelium)
@@ -589,7 +605,7 @@ def run_simulation(params, random_seed=42):
             mean_ros = np.mean(ROS[0, x_start:x_end])  
             
             # Increase injury from pathogens
-            count_pathogens = pathogen_epithelium_counts[i]
+            count_pathogens = pathogen_epithelium_counts[i] # here commensals might also be added, not sure
             epithelium_injury[i] += int(logistic_scaled_0_to_5_quantized(count_pathogens, params['k_in'], params['x0_in']))
             
             # Increase injury from ROS
@@ -638,8 +654,8 @@ def run_simulation(params, random_seed=42):
         
         # Death counts (cumulative for this implementation)
         microbes_cumdeath_longitudinal[t, :] = [
-            commensals_killed_by_ROS, commensals_killed_by_Mac, 0, 0,  # Commensals (M0, M1, M2 not tracked separately)
-            pathogens_killed_by_ROS, pathogens_killed_by_Mac, 0, 0     # Pathogens (M0, M1, M2 not tracked separately)
+            commensals_killed_by_ROS, commensals_killed_by_Mac[0],commensals_killed_by_Mac[1],commensals_killed_by_Mac[2],   # Commensals (M0, M1, M2 not tracked separately)
+            pathogens_killed_by_ROS, pathogens_killed_by_Mac[0], pathogens_killed_by_Mac[1], pathogens_killed_by_Mac[2]     # Pathogens (M0, M1, M2 not tracked separately)
         ]
     
     print("Simulation complete!")
