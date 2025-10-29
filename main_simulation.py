@@ -183,10 +183,7 @@ def run_simulation(params, random_seed=42):
     microbes_longitudinal = np.zeros((t_max, 2), dtype=np.int32)
     tregs_longitudinal = np.zeros((t_max, 2), dtype=np.int32)
     microbes_cumdeath_longitudinal = np.zeros((t_max, 8), dtype=np.int32)
-    
-    print(f"Starting simulation with {n_phagocytes} phagocytes and {n_tregs} Tregs...")
-    print(f"Initial bacteria: {params['n_commensals_lp']} commensals, {n_pathogens_lp} pathogens")
-    
+
     # Main simulation loop
     for t in range(t_max):
         # Update SAMPs based on activated tregs (VECTORIZED)
@@ -683,9 +680,7 @@ def run_simulation(params, random_seed=42):
             commensals_killed_by_ROS, commensals_killed_by_Mac[0],commensals_killed_by_Mac[1],commensals_killed_by_Mac[2],   # Commensals (M0, M1, M2 not tracked separately)
             pathogens_killed_by_ROS, pathogens_killed_by_Mac[0], pathogens_killed_by_Mac[1], pathogens_killed_by_Mac[2]     # Pathogens (M0, M1, M2 not tracked separately)
         ]
-    
-    print("Simulation complete!")
-    
+
     # Create results DataFrame
     results = create_results_dataframe(
         epithelium_longitudinal, macrophages_longitudinal, microbes_longitudinal,
@@ -804,8 +799,6 @@ def plot_results(df):
     plt.tight_layout()
     plt.savefig('/Users/burcutepekule/Desktop/tregs/simulation_results_py.png', dpi=150, bbox_inches='tight')
     #plt.show()
-    
-    print("Plots saved to simulation_results_py.png")
 
 
 if __name__ == "__main__":
@@ -820,19 +813,9 @@ if __name__ == "__main__":
     
     # Calculate runtime
     runtime = time() - start_time
-    print(f"\nSimulation runtime: {runtime:.2f} seconds")
-    
+
     # Save results
     results_df.to_csv('/Users/burcutepekule/Desktop/tregs/simulation_results_py.csv', index=False)
-    print("Results saved to simulation_results_py.csv")
-    
+
     # Create plots
     plot_results(results_df)
-    
-    # Display summary statistics
-    print("\n=== Summary Statistics ===")
-    print(f"Final epithelial health: {results_df['epithelial_healthy'].iloc[-1]} healthy cells")
-    print(f"Final pathogen count: {results_df['pathogen'].iloc[-1]}")
-    print(f"Final commensal count: {results_df['commensal'].iloc[-1]}")
-    print(f"Total pathogens killed by ROS: {results_df['P_ROS'].iloc[-1]}")
-    print(f"Total pathogens killed by Macrophages: {results_df['P_Mac'].iloc[-1]}")
