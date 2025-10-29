@@ -290,7 +290,7 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
                     probs = np.ones(len(neighbor_density)) / len(neighbor_density)
                 
                 # Sample weighted by density concentration
-                chosen_idx = rng.choice(len(neighbors_x), size=1, replace=True, p=probs)
+                chosen_idx = rng.choice(len(neighbors_x), replace=True, p=probs)
                 treg_x[i] = neighbors_x[chosen_idx]
                 treg_y[i] = neighbors_y[chosen_idx]
         else:
@@ -335,7 +335,7 @@ def run_simulation(params, random_stream_file='random_numbers_seed_42.txt'):
                     probs = np.ones(len(neighbor_damps)) / len(neighbor_damps)
                 
                 # Sample weighted by DAMP concentration
-                chosen_idx = rng.choice(len(neighbors_x), size=1, replace=True, p=probs)
+                chosen_idx = rng.choice(len(neighbors_x), replace=True, p=probs)
                 phagocyte_x[i] = neighbors_x[chosen_idx]
                 phagocyte_y[i] = neighbors_y[chosen_idx]
         else:
