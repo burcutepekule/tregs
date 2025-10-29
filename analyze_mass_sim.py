@@ -16,6 +16,7 @@ from pathlib import Path
 def load_mass_sim_results(results_dir='mass_sim_results'):
     """
     Load all mass simulation results and merge with parameters/scenarios.
+    Handles both combined file and individual param_set files.
 
     Returns:
         tuple: (results_df, params_df, scenarios_df)
@@ -24,7 +25,20 @@ def load_mass_sim_results(results_dir='mass_sim_results'):
 
     print(f"Loading results from {results_dir}...")
 
-    results = pd.read_csv(results_dir / 'all_simulation_results.csv')
+    # Try to load combined file first
+    combined_file = results_dir / 'all_simulation_results.csv'
+    if combined_file.exists():
+        print(f"  Found combined file, loading...")
+        results = pd.read_csv(combined_file)
+    else:
+        # Load individual param_set files
+        param_set_files = sorted(results_dir.glob('simulation_results_param_set_*.csv'))
+        if not param_set_files:
+            raise FileNotFoundError(f"No result files found in {results_dir}")
+
+        print(f"  Found {len(param_set_files)} parameter set files, combining...")
+        results = pd.concat([pd.read_csv(f) for f in param_set_files], ignore_index=True)
+
     params = pd.read_csv(results_dir / 'sampled_parameters.csv')
     scenarios = pd.read_csv(results_dir / 'scenarios.csv')
 
