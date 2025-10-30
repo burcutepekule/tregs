@@ -31,7 +31,7 @@ sterile_comparison_keep    = c()
 pathogenic_comparison_keep = c()
 
 t_cut = 0
-for (i in 0:1499){
+for (i in 0:3100){
   print(i)
   results         = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results/simulation_results_param_set_',i,'.csv'), show_col_types = FALSE)
   # results_merged  = rbind(results_merged, results)

@@ -21,7 +21,7 @@ results_plot = results %>% left_join(params, by = 'param_set_id')
 
 colnames(results_plot)[3] = 'tregs_on'
 
-results_plot = results_plot %>% dplyr::filter(replicate_id==0)
+results_plot = results_plot %>% dplyr::filter(replicate_id==5)
 variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
 data_long = results_plot %>%
   dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%

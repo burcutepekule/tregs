@@ -16,27 +16,6 @@ library(ggrepel)
 library(randomForest)
 library(vip)
 library(pdp)
-
-# class_description = case_when(
-#   class_code == "0000" ~ "No effect",
-#   class_code == "1000" ~ "Sterile better only",
-#   class_code == "0100" ~ "Pathogenic better only",
-#   class_code == "0010" ~ "Sterile worse only",
-#   class_code == "0001" ~ "Pathogenic worse only",
-#   class_code == "1100" ~ "Both better",
-#   class_code == "0011" ~ "Both worse",
-#   class_code == "1010" ~ "Sterile mixed",
-#   class_code == "0101" ~ "Pathogenic mixed",
-#   class_code == "1001" ~ "Sterile better, pathogenic worse",
-#   class_code == "0110" ~ "Pathogenic better, sterile worse",
-#   class_code == "1110" ~ "Both better, sterile worse",
-#   class_code == "1101" ~ "Both better, pathogenic worse",
-#   class_code == "1011" ~ "Sterile mixed, pathogenic worse",
-#   class_code == "0111" ~ "Pathogenic mixed, sterile worse",
-#   class_code == "1111" ~ "All effects",
-#   TRUE ~ "Other"
-# )
-
 df_short_merged_with_params = readRDS('/Users/burcutepekule/Desktop/tregs/df_short_merged_with_params.rds')
 
 param_cols = colnames(df_short_merged_with_params)[8:31]
@@ -70,12 +49,18 @@ loadings$importance = sqrt(loadings$LD1^2 + loadings$LD2^2)
 # Keep top N features (e.g., top 8)
 top_features = loadings %>% filter(importance > 0.00*max(loadings$importance))
 
-lda_scores$class_label = factor(lda_scores$class_code,
-                                levels = c('0000', '0010', '0100','1000','1100'),
-                                labels = c("No effect", "Sterile worse only", 
-                                           "Pathogenic better only",
-                                           "Sterile better only",
-                                           "Both better"))
+lda_scores = lda_scores %>% mutate(class_label = case_when(
+  class_code == "0000" ~ "Drift", #"No effect",
+  class_code == "1000" ~ "Favorable", #Sterile better only",
+  class_code == "0100" ~ "Favorable", #"Pathogenic better only",
+  class_code == "0010" ~ "Unfavorable", #"Sterile worse only",
+  class_code == "0001" ~ "Unfavorable", #"Pathogenic worse only",
+  class_code == "1100" ~ "Favorable", #"Both better",
+  class_code == "0011" ~ "Unfavorable", #"Both worse",
+  class_code == "1001" ~ "Unfavorable", # "Sterile better, pathogenic worse",
+  class_code == "0110" ~ "Unfavorable", # "Pathogenic better, sterile worse",
+  TRUE ~ "Other"
+))
 
 # Calculate percentages for each class_label
 percentage_data = lda_scores %>%
@@ -85,13 +70,14 @@ percentage_data = lda_scores %>%
     percentage = (n() / nrow(lda_scores)) * 100
   ) %>%
   mutate(
-    label = paste0(class_label, "\n(", sprintf("%.1f", percentage), "%)")
+    label = paste0(class_label, "\n(", sprintf("%.2f", percentage), "%)")
   )
 
 lda_scores_labeled = lda_scores %>% left_join(percentage_data, by = "class_label")
 
+library(RColorBrewer)
 custom_colors = setNames(
-  c("#AFAAB9","red",'lightgreen','lightblue','blue'), 
+  c("#AFAAB9","blue","red"),
   percentage_data$label
 )
 
