@@ -3,6 +3,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(purrr)
+library(readr)  # For read_csv
+library(stringr)
 
 # Function to calculate Cohen's d
 cohens_d = function(x, y) {
@@ -30,15 +32,21 @@ results_merged             = c()
 sterile_comparison_keep    = c()
 pathogenic_comparison_keep = c()
 
+
+path = "/Users/burcutepekule/Desktop/tregs/mass_sim_results/"
+files = list.files(path, pattern = "^simulation_results_param_set_\\d+\\.csv$", full.names = TRUE)
+indices = str_extract(basename(files), "\\d+") |> as.numeric()
+max_index = max(indices, na.rm = TRUE)
+
 t_cut = 0
-for (i in 0:3100){
+for (i in 0:max_index){
   print(i)
   results         = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results/simulation_results_param_set_',i,'.csv'), show_col_types = FALSE)
   # results_merged  = rbind(results_merged, results)
   
   # Merge
   results = results %>% left_join(params, by = 'param_set_id') 
-  results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+
+  results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
                                             5*epithelial_inj_1+
                                             4*epithelial_inj_2+
                                             3*epithelial_inj_3+
@@ -50,7 +58,7 @@ for (i in 0:3100){
     filter(t >= t_cut) %>%
     dplyr::select(scenario_id, param_set_id, replicate_id, t, epithelial_score)
   
-  sterile_comparison = full_data_comparison %>%
+  pathogenic_comparison = full_data_comparison %>%
     filter(scenario_id %in% c(0, 1)) %>%
     group_by(param_set_id, replicate_id) %>%
     nest() %>%
@@ -96,7 +104,7 @@ for (i in 0:3100){
     )
   
   # For pathogenic condition (3 vs 4)
-  pathogenic_comparison = full_data_comparison %>%
+  sterile_comparison = full_data_comparison %>%
     filter(scenario_id %in% c(3, 4)) %>%
     group_by(param_set_id, replicate_id) %>%
     nest() %>%
@@ -146,11 +154,11 @@ for (i in 0:3100){
 table(sterile_comparison_keep$effect_size)
 hist(sterile_comparison_keep$mean_diff)
 
-sterile_comparison_keep    = sterile_comparison_keep %>% dplyr::mutate(sterile_treg_better = ifelse((effect_size=='Large' & mean_diff>0 & median_diff>0),1,0))
-pathogenic_comparison_keep = pathogenic_comparison_keep %>% dplyr::mutate(pathogenic_treg_better = ifelse((effect_size=='Large' & mean_diff>0 & median_diff>0),1,0))
+sterile_comparison_keep    = sterile_comparison_keep %>% dplyr::mutate(sterile_treg_better = ifelse(((effect_size=='Large' | effect_size=='Medium') & mean_diff>0 & median_diff>0),1,0))
+pathogenic_comparison_keep = pathogenic_comparison_keep %>% dplyr::mutate(pathogenic_treg_better = ifelse(((effect_size=='Large' | effect_size=='Medium') & mean_diff>0 & median_diff>0),1,0))
 
-sterile_comparison_keep    = sterile_comparison_keep %>% dplyr::mutate(sterile_treg_worse = ifelse((effect_size=='Large' & mean_diff<0 & median_diff<0),1,0))
-pathogenic_comparison_keep = pathogenic_comparison_keep %>% dplyr::mutate(pathogenic_treg_worse = ifelse((effect_size=='Large' & mean_diff<0 & median_diff<0),1,0))
+sterile_comparison_keep    = sterile_comparison_keep %>% dplyr::mutate(sterile_treg_worse = ifelse(((effect_size=='Large' | effect_size=='Medium') & mean_diff<0 & median_diff<0),1,0))
+pathogenic_comparison_keep = pathogenic_comparison_keep %>% dplyr::mutate(pathogenic_treg_worse = ifelse(((effect_size=='Large' | effect_size=='Medium') & mean_diff<0 & median_diff<0),1,0))
 
 sterile_comparison_keep_short    = sterile_comparison_keep %>% dplyr::select(param_set_id, replicate_id, sterile_treg_better, sterile_treg_worse)
 pathogenic_comparison_keep_short = pathogenic_comparison_keep %>% dplyr::select(param_set_id, replicate_id, pathogenic_treg_better, pathogenic_treg_worse)
@@ -189,15 +197,15 @@ df_short_impact = df_short_impact %>%
       class_code == "0001" ~ "Pathogenic worse only",
       class_code == "1100" ~ "Both better",
       class_code == "0011" ~ "Both worse",
-      class_code == "1010" ~ "Sterile mixed",
-      class_code == "0101" ~ "Pathogenic mixed",
+      class_code == "1010" ~ "Sterile conflicting",
+      class_code == "0101" ~ "Pathogenic conflicting",
       class_code == "1001" ~ "Sterile better, pathogenic worse",
       class_code == "0110" ~ "Pathogenic better, sterile worse",
-      class_code == "1110" ~ "Both better, sterile worse",
-      class_code == "1101" ~ "Both better, pathogenic worse",
-      class_code == "1011" ~ "Sterile mixed, pathogenic worse",
-      class_code == "0111" ~ "Pathogenic mixed, sterile worse",
-      class_code == "1111" ~ "All effects",
+      class_code == "1110" ~ "Pathogenic better, sterile conflicting",
+      class_code == "1101" ~ "Sterile better, pathogenic conflicting",
+      class_code == "1011" ~ "Sterile conflicting, pathogenic worse",
+      class_code == "0111" ~ "Pathogenic conflicting, sterile worse",
+      class_code == "1111" ~ "All conflicting",
       TRUE ~ "Other"
     )
   )
