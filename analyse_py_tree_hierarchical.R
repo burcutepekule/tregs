@@ -17,7 +17,11 @@ library(caret)
 
 df_short_merged_with_params = readRDS('/Users/burcutepekule/Desktop/tregs/df_short_merged_with_params.rds')
 table(df_short_merged_with_params$class_description)
-df_short_merged_with_params = df_short_merged_with_params %>% dplyr::filter(class_description!="Pathogenic better, sterile worse")
+df_short_merged_with_params = df_short_merged_with_params %>% dplyr::filter(class_description!="Sterile worse only")
+df_short_merged_with_params = df_short_merged_with_params %>% dplyr::filter(class_description!="Sterile better, pathogenic worse")
+length(unique(df_short_merged_with_params$param_set_id))
+dim(df_short_merged_with_params)
+
 table(df_short_merged_with_params$class_description)
 
 # Upsampling
@@ -42,19 +46,33 @@ library(partykit)
 # Prepare data
 tree_data = cbind(class_description = lda_data$class_description, features)
 
+# Create a new factor with shorter, clear labels
+tree_data$class_description = factor(tree_data$class_description,
+                                           levels = c("Both better", 
+                                                      "Pathogenic better only",
+                                                      "Sterile better only",
+                                                      "No effect",
+                                                      "Pathogenic worse only"
+                                           ),
+                                           labels = c("P+S+",     
+                                                      "P+",       
+                                                      "S+",      
+                                                      "P0S0",
+                                                      "P-"))     
+
 # Fit decision tree
 tree_model = rpart(class_description ~ ., 
                    data = tree_data,
                    method = "class",
                    control = rpart.control(cp = 0.03, # complexity parameter (smaller, more complex)
-                                           minsplit = 20, # min observations for split, 20 default
+                                           minsplit = 30, # min observations for split, 20 default
                                            maxdepth = 4)) # max tree depth
 
 # First, check the order of your classes
 classes = levels(as.factor(tree_data$class_description))
 print(classes)  # See the order
 
-palette_list = list("Greens", "Grays", "Purples", "Blues", "Reds")
+palette_list = list("Greens", "Grays", "Purples","Reds", "Blues", "Oranges")
 
 # Visualize tree with rules
 pdf("tree_model.pdf", width = 24, height = 8)
@@ -69,35 +87,11 @@ dev.off()
 # Get text rules
 print(tree_model)
 
-# Create a copy of your data with proper abbreviated labels
-tree_data_clean = tree_data
-
-# Create a new factor with shorter, clear labels
-tree_data_clean$class_description = factor(tree_data$class_description,
-                                           levels = c("Both better", 
-                                                      "No effect",
-                                                      "Pathogenic better only",
-                                                      "Sterile better only",
-                                                      "Sterile worse only"),
-                                           labels = c("P+E+",      # Valid R name
-                                                      "P0E0",        # Valid R name
-                                                      "P+",      # Valid R name
-                                                      "S+",      # Valid R name
-                                                      "S-"))      # Valid R name
-
-# Refit the model with clean labels
-tree_model_clean = rpart(class_description ~ ., 
-                         data = tree_data_clean,
-                         method = "class",
-                         control = rpart.control(cp = 0.03,
-                                                 minsplit = 30,
-                                                 maxdepth = 4))
-
 # Convert to party object and plot
-party_tree_clean = as.party(tree_model_clean)
+party_tree = as.party(tree_model)
 
 pdf("decision_tree.pdf", width = 22, height = 10)
-plot(party_tree_clean, tp_args = list(rot = 45))  # Now rotation should work fine with short labels
+plot(party_tree, tp_args = list(rot = 45))  # Now rotation should work fine with short labels
 dev.off()
 
 # Extract rules as text

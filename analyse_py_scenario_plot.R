@@ -9,12 +9,12 @@ params           = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results
 df_short_merged_with_params = readRDS('/Users/burcutepekule/Desktop/tregs/df_short_merged_with_params.rds')
 table(df_short_merged_with_params$class_description)
 
-df_check = df_short_merged_with_params %>% dplyr::filter(class_description=='No effect')
+df_check = df_short_merged_with_params %>% dplyr::filter(class_description=='Sterile better, pathogenic worse')
 
 param_set_t = params %>% dplyr::filter(param_set_id %in% df_check$param_set_id) 
 param_set_c = params %>% dplyr::filter(!(param_set_id %in% df_check$param_set_id))
 
-for (ind in 1:500){
+for (ind in 1:dim(df_check)[1]){
   i            = df_check$param_set_id[ind]
   print(i)
   results      = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results/simulation_results_param_set_',i,'.csv'), show_col_types = FALSE)
@@ -22,7 +22,7 @@ for (ind in 1:500){
   
   colnames(results_plot)[3] = 'tregs_on'
   
-  results_plot = results_plot %>% dplyr::filter(replicate_id==5)
+  # results_plot = results_plot %>% dplyr::filter(replicate_id==5)
   variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
   data_long = results_plot %>%
     dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%

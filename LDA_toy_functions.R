@@ -22,8 +22,14 @@ lda_data = data.frame(
 # lda_data = lda_data %>% dplyr::mutate(class=ifelse(sign(x_1*x_2)<0 & abs(x_1*x_2)>1e-1,"N",
 #                                                    ifelse(sign(x_1*x_2)>0 & abs(x_1*x_2)>1e-1,"P","0")))
 
-lda_data = lda_data %>% dplyr::mutate(class=ifelse(sign(x_1+x_2)<0 & abs(x_1+x_2)>1e-1,"N",
-                                                   ifelse(sign(x_1+x_2)>0 & abs(x_1+x_2)>1e-1,"P","0")))
+lda_data = lda_data %>% dplyr::mutate(class=ifelse(sign(x_1+x_2)<0 & abs(x_1+x_2)>0.5,"N",
+                                                   ifelse(sign(x_1+x_2)>0 & abs(x_1+x_2)>0.5,"P","0")))
+
+# lda_data = lda_data %>% dplyr::mutate(class=ifelse((x_1>0 & x_2<0),"P_1",
+#                                                    ifelse((x_2>0 & x_1<0),"P_2","N")))
+
+# lda_data = lda_data %>% dplyr::mutate(class=ifelse((x_1>0.5 | x_2<0),"P_1",
+#                                                    ifelse((x_2>0.5 | x_1<0),"P_2","N")))
 
 table(lda_data$class)
                                       
@@ -85,8 +91,8 @@ p_lda = ggplot(lda_scores_labeled, aes(x = LD1, y = LD2, color = label)) +
                   color = "black", size = 4.5, fontface = "bold", 
                   force = 5, max.overlaps = Inf, segment.color = NA) +
   scale_color_manual(values = custom_colors) +
-  labs(title = "LDA projection (2D) with top features, pathogenic injury",
-       x = "LD1", y = "LD2", color = "Treg effect class") +
+  labs(title = "LDA projection",
+       x = "LD1", y = "LD2", color = "Class") +
   theme_minimal(base_size = 14)
 
 feature_table = tableGrob(

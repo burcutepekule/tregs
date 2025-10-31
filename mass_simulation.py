@@ -17,6 +17,7 @@ from itertools import product
 import argparse
 import time
 from main_simulation import initialize_parameters, run_simulation
+import random
 
 def sample_parameters(n_sets, random_seed=42):
     """
@@ -230,7 +231,8 @@ def run_mass_simulations(n_param_sets, n_replicates=10, n_cores=10,
 
             # Generate replicates with different seeds
             for replicate_id in range(n_replicates):
-                seed = base_seed + param_set_id * 1000000 + scenario_id * 1000 + replicate_id
+               # seed = base_seed + param_set_id * 1000000 + scenario_id * 1000 + replicate_id
+                seed = random.randint(0, 2**32 - 1)
                 tasks.append((param_set_id, scenario_id, replicate_id, params, seed))
 
         # Run this parameter set in parallel
