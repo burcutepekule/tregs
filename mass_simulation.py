@@ -30,7 +30,7 @@ def sample_parameters(n_sets, random_seed=42):
     th_ROS_microbe = np.random.uniform(0, 0.5, n_sets)
     th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 1.0)  # Must be > th_ROS_microbe
     #epith_recovery_chance = np.random.uniform(0, 1, n_sets)
-    epith_recovery_chance = np.random.uniform(0, 0.5, n_sets) # otherwise dominated by 0 as seen before
+    epith_recovery_chance = np.random.uniform(0, 0.2, n_sets) # otherwise dominated by 0 as seen before
     rat_com_pat_threshold = np.random.uniform(0.5, 1, n_sets)  # At least above half
 
     # Diffusion speeds (MUST be < 0.125 for stability!)
