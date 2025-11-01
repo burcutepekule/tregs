@@ -25,49 +25,91 @@ def sample_parameters(n_sets, random_seed=42):
     Matches the R sampling scheme.
     """
     np.random.seed(random_seed)
+    
+    # # Sample all parameters -- OLD, FULL RANGE
+    # th_ROS_microbe = np.random.uniform(0, 0.5, n_sets)
+    # th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 1.0)  # Must be > th_ROS_microbe
+    # epith_recovery_chance = np.random.uniform(0, 1, n_sets)
+    # rat_com_pat_threshold = np.random.uniform(0.5, 1, n_sets)  # At least above half
 
-    # Sample all parameters
-    th_ROS_microbe = np.random.uniform(0, 0.5, n_sets)
-    th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 1.0)  # Must be > th_ROS_microbe
+    # # Diffusion speeds (MUST be < 0.125 for stability!)
+    # diffusion_speed_DAMPs = np.random.uniform(0, 0.12, n_sets)
+    # diffusion_speed_SAMPs = np.random.uniform(0, 0.12, n_sets)
+    # diffusion_speed_ROS = np.random.uniform(0, 0.12, n_sets)
+
+    # # Signal production rates
+    # add_ROS = np.random.uniform(0, 1, n_sets)
+    # add_DAMPs = np.random.uniform(0, 1, n_sets)
+    # add_SAMPs = np.random.uniform(0, 1, n_sets)
+
+    # # Decay rates
+    # DAMPs_decay = np.random.uniform(0, 1, n_sets)
+    # SAMPs_decay = np.random.uniform(0, 1, n_sets)
+    # ros_decay = np.random.uniform(0, 1, n_sets)
+
+    # # Activation thresholds
+    # activation_threshold_DAMPs = np.random.uniform(0, 1, n_sets)
+    # activation_threshold_SAMPs = np.random.uniform(0, 1, n_sets)
+
+    # # Engulfing and ROS rates - baseline is max 50% of capacity
+    # activity_engulf_M0_baseline = np.random.uniform(0, 0.5, n_sets)
+    # activity_engulf_M1_baseline = np.random.uniform(0, 0.5, n_sets)
+    # activity_engulf_M2_baseline = np.random.uniform(0, 0.5, n_sets)
+    # activity_ROS_M1_baseline = np.random.uniform(0, 0.5, n_sets)
+
+    # # Leakage rates
+    # rate_leak_commensal_injury = np.random.uniform(0.5, 1, n_sets)
+    # rate_leak_pathogen_injury = np.random.uniform(0.5, 1, n_sets)
+    # rate_leak_commensal_baseline = np.random.uniform(0.0, 0.25, n_sets)
+
+    # # Active age limit (discrete values 3-30)
+    # active_age_limit = np.random.randint(3, 31, n_sets)
+
+    # # Treg discrimination efficiency
+    # treg_discrimination_efficiency = np.random.uniform(0, 1, n_sets)
+
+    # Sample all parameters --- NEW, FOR BALANCED 0/1 DATASET
+    th_ROS_microbe = np.random.uniform(0.05, 0.40, n_sets)
+    th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 0.95)  # Must be > th_ROS_microbe
     #epith_recovery_chance = np.random.uniform(0, 1, n_sets)
-    epith_recovery_chance = np.random.uniform(0, 0.2, n_sets) # otherwise dominated by 0 as seen before
-    rat_com_pat_threshold = np.random.uniform(0.5, 1, n_sets)  # At least above half
+    epith_recovery_chance = np.random.uniform(0.02, 0.57, n_sets) # otherwise dominated by 0 as seen before
+    rat_com_pat_threshold = np.random.uniform(0.50, 0.97, n_sets)  # At least above half
 
     # Diffusion speeds (MUST be < 0.125 for stability!)
-    diffusion_speed_DAMPs = np.random.uniform(0, 0.12, n_sets)
-    diffusion_speed_SAMPs = np.random.uniform(0, 0.12, n_sets)
-    diffusion_speed_ROS = np.random.uniform(0, 0.12, n_sets)
+    diffusion_speed_DAMPs = np.random.uniform(0.01, 0.09, n_sets)
+    diffusion_speed_SAMPs = np.random.uniform(0.04, 0.11, n_sets)
+    diffusion_speed_ROS = np.random.uniform(0.01, 0.11, n_sets)
 
     # Signal production rates
-    add_ROS = np.random.uniform(0, 1, n_sets)
-    add_DAMPs = np.random.uniform(0, 1, n_sets)
-    add_SAMPs = np.random.uniform(0, 1, n_sets)
+    add_ROS = np.random.uniform(0.14, 0.95, n_sets)
+    add_DAMPs = np.random.uniform(0.17, 1, n_sets)
+    add_SAMPs = np.random.uniform(0.34, 0.95, n_sets)
 
     # Decay rates
-    DAMPs_decay = np.random.uniform(0, 1, n_sets)
-    SAMPs_decay = np.random.uniform(0, 1, n_sets)
-    ros_decay = np.random.uniform(0, 1, n_sets)
+    ros_decay = np.random.uniform(0, 0.42, n_sets)
+    DAMPs_decay = np.random.uniform(0, 0.58, n_sets)
+    SAMPs_decay = np.random.uniform(0.04, 0.98, n_sets)
 
     # Activation thresholds
-    activation_threshold_DAMPs = np.random.uniform(0, 1, n_sets)
-    activation_threshold_SAMPs = np.random.uniform(0, 1, n_sets)
+    activation_threshold_DAMPs = np.random.uniform(0.00, 1.00, n_sets)
+    activation_threshold_SAMPs = np.random.uniform(0.07, 0.96, n_sets)
 
     # Engulfing and ROS rates - baseline is max 50% of capacity
-    activity_engulf_M0_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_engulf_M1_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_engulf_M2_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_ROS_M1_baseline = np.random.uniform(0, 0.5, n_sets)
+    activity_engulf_M0_baseline = np.random.uniform(0.19, 0.50, n_sets)
+    activity_engulf_M1_baseline = np.random.uniform(0.01, 0.33, n_sets)
+    activity_engulf_M2_baseline = np.random.uniform(0.02, 0.39, n_sets)
+    activity_ROS_M1_baseline = np.random.uniform(0.17, 0.43, n_sets)
 
     # Leakage rates
-    rate_leak_commensal_injury = np.random.uniform(0.5, 1, n_sets)
-    rate_leak_pathogen_injury = np.random.uniform(0.5, 1, n_sets)
-    rate_leak_commensal_baseline = np.random.uniform(0.0, 0.25, n_sets)
+    rate_leak_commensal_injury = np.random.uniform(0.57, 0.99, n_sets)
+    rate_leak_pathogen_injury = np.random.uniform(0.55, 0.94, n_sets)
+    rate_leak_commensal_baseline = np.random.uniform(0.03, 0.23, n_sets)
 
     # Active age limit (discrete values 3-30)
-    active_age_limit = np.random.randint(3, 31, n_sets)
+    active_age_limit = np.random.randint(4, 29, n_sets)
 
     # Treg discrimination efficiency
-    treg_discrimination_efficiency = np.random.uniform(0, 1, n_sets)
+    treg_discrimination_efficiency = np.random.uniform(0.15, 0.90, n_sets)
 
     # Create DataFrame
     params_df = pd.DataFrame({

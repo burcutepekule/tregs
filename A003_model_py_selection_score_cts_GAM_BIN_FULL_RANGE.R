@@ -21,6 +21,66 @@ df_model    = merge(df_model, df_params, by='param_set_id')
 df_model_nz = df_model %>% dplyr::filter(nonzero==1)
 df_model_z  = df_model %>% dplyr::filter(nonzero==0)
 
+# All parameter names (exactly as in your model)
+param_names <- c(
+  "th_ROS_microbe",
+  "th_ROS_epith_recover",
+  "epith_recovery_chance",
+  "rat_com_pat_threshold",
+  "diffusion_speed_DAMPs",
+  "diffusion_speed_SAMPs",
+  "diffusion_speed_ROS",
+  "add_ROS",
+  "add_DAMPs",
+  "add_SAMPs",
+  "ros_decay",
+  "DAMPs_decay",
+  "SAMPs_decay",
+  "activation_threshold_DAMPs",
+  "activation_threshold_SAMPs",
+  "activity_engulf_M0_baseline",
+  "activity_engulf_M1_baseline",
+  "activity_engulf_M2_baseline",
+  "activity_ROS_M1_baseline",
+  "rate_leak_commensal_injury",
+  "rate_leak_pathogen_injury",
+  "rate_leak_commensal_baseline",
+  "active_age_limit",
+  "treg_discrimination_efficiency"
+)
+
+# Output folder for saving plots
+outdir <- "/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range/gam_histograms"
+dir.create(outdir, showWarnings = FALSE)
+
+# Function to create one histogram plot for a given parameter
+plot_param_distribution <- function(param) {
+  ggplot(df_model, aes(x = .data[[param]], fill = factor(nonzero))) +
+    geom_density(alpha = 0.4, color = NA) +
+    scale_fill_manual(values = c("0" = "gray70", "1" = "#3182bd"),
+                      labels = c("Zero outcome", "Nonzero outcome")) +
+    labs(
+      x = param,
+      y = "Density",
+      fill = "Outcome",
+      title = paste("Distribution of", param, "by outcome (nonzero)")
+    ) +
+    theme_minimal(base_size = 13)
+}
+
+# Loop through all parameters, plot and save
+walk(param_names, function(param) {
+  p <- plot_param_distribution(param)
+  ggsave(
+    filename = file.path(outdir, paste0(param, "_histogram.png")),
+    plot = p,
+    width = 6,
+    height = 4,
+    dpi = 300
+  )
+  message("✅ Saved: ", param)
+})
+
 table(df_model$nonzero)
 
 gam_binary = gam(nonzero ~ 
@@ -47,9 +107,11 @@ gam_binary = gam(nonzero ~
               s(rate_leak_pathogen_injury, bs = "cs") +
               s(rate_leak_commensal_baseline, bs = "cs") +
               s(active_age_limit, bs = "cs") +
-              s(treg_discrimination_efficiency, bs = "cs"), # + comparison + injury_type, # if also modelled as factors
+              s(treg_discrimination_efficiency, bs = "cs"),
+              s(param_set_id, bs="re"),     # ← random intercept for param set
             data = df_model,
-            family = binomial)
+            family = binomial,
+            method = "REML")
 
 summary(gam_binary)      # see which predictors matter
 plot(gam_binary, pages=1, shade=TRUE)   # visualize smooth effects
