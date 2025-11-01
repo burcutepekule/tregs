@@ -79,7 +79,7 @@ t_max_ind = 500 # max 500 time points
 all_comparison_results = data.frame()
 
 if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id.rds')){
-  start_id = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id.rds')
+  start_id = 1+readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id.rds')
 }else{
   start_id = 0
 }
@@ -187,8 +187,17 @@ for (i in start_id:max_index){
     }
   }
 }
+message("Last param_id successfully added: ", max(all_comparison_results$param_set_id))
 
-saveRDS(all_comparison_results, paste0('/Users/burcutepekule/Desktop/tregs/all_comparison_results_',start_id,'.rds'))
-saveRDS(max(all_comparison_results$param_set_id), '/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id.rds')
+saveRDS(max(all_comparison_results$param_set_id), '/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id.rds') 
+
+#---- read previous file
+if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')){
+  saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+}else{
+  all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+  all_comparison_results = rbind(all_comparison_results_old, all_comparison_results)
+  saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+}
 
 

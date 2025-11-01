@@ -10,13 +10,19 @@ library(mgcv)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 df_params  = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range/sampled_parameters.csv', show_col_types = FALSE)
-df_summary = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_full_range.rds')
-df_summary_merged = merge(df_summary, df_params, by='param_set_id')
+df_summary = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts.rds')
+df_raw     = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw.rds')
 
-df_model = df_summary_merged %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type=='sterile')
-# df_model = df_summary_merged %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type=='pathogenic')
+df_model = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON')
+df_model = merge(df_model, df_params, by='param_set_id')
+df_model = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large') & abs(mean_diff)>4*tol, 1, 0))
 
-df_model$nonzero = as.numeric(df_model$outcome_mean != 0)
+table(df_model$nonzero)
+hist(df_model$outcome,30)
+
+# df_model$nonzero = as.numeric(df_model$outcome_mean!=0) # for full range, there inflation of 0 was insane
+# df_model$nonzero = as.numeric(abs(df_model$outcome_mean)>25*0.05)
+# table(df_model$nonzero)
 
 gam_binary = gam(nonzero ~ 
               s(th_ROS_microbe, bs = "cs") +
