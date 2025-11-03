@@ -9,18 +9,21 @@ library(zoo)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 # df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range_RND.rds')
-df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range_LHS.rds')
+# df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range_LHS.rds')
+df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+hist(df_raw$mean_diff, 30)
 
 df_raw_keep = df_raw
 hist(df_raw_keep$ss_start)
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-ss_start_threshold   = 250
+ss_start_threshold   = 450
 param_id_all_below = df_raw %>%
   dplyr::group_by(param_set_id) %>%
   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
   dplyr::filter(all_below) %>%
   dplyr::pull(param_set_id)
 df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
+hist(df_raw$mean_diff) # here you lose the very large ones
 
 #----- filter based on replicate_id, less than 10 means incomplete!
 param_id_all_complete = df_raw %>%
@@ -55,15 +58,18 @@ df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log(1+abs_cohens_d*a
 # df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log10(1+abs_cohens_d*abs(mean_diff)))
 
 hist(df_raw$outcome,30)
-hist(df_raw$mean_diff)
+hist(df_raw$mean_diff,30)
 # hist(sign(df_raw$mean_diff)*log10(abs(1+df_raw$mean_diff)),30)
 table(round(df_raw$mean_diff,3))
 
+tol = 25*0.25 # at least 5%
 x = round(df_raw$mean_diff,3)
-round(100*sum(x==0)/length(x),2)
+round(100*sum(x<=tol & x>=(-1*tol))/length(x),2)
+round(100*sum(x>tol)/length(x),2)
+round(100*sum(x<(-1*tol))/length(x),2)
+
 # df_raw_non_negligible = df_raw %>% dplyr::filter(effect_size %in% c("Medium", "Large"))
 
-tol = 25*0.05 # at least 5%
 df_summary = df_raw %>%
   dplyr::group_by(param_set_id, injury_type, comparison) %>%
   dplyr::summarise(
@@ -81,6 +87,6 @@ df_summary$tol = tol
 df_raw$tol = tol
 
 # saveRDS(df_summary, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_full_range.rds')
-saveRDS(df_summary, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_full_range_LHS.rds')
-saveRDS(df_raw, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_full_range_LHS.rds')
+saveRDS(df_summary, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_LHS.rds')
+saveRDS(df_raw, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_LHS.rds')
 

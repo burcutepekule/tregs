@@ -31,8 +31,8 @@ def sample_parameters(n_sets, random_seed=42):
     # Define the parameter bounds
     # Note: Some parameters have dependencies which we'll handle separately
     param_bounds = [
-        (0, 0.5),      # th_ROS_microbe
-        (0, 1.0),      # th_ROS_epith_recover (will be adjusted)
+        (0, 1),        # th_ROS_microbe
+        (0, 1),        # th_ROS_epith_recover (will be adjusted)
         (0, 1),        # epith_recovery_chance
         (0.5, 1),      # rat_com_pat_threshold
         (0, 0.12),     # diffusion_speed_DAMPs
@@ -94,7 +94,7 @@ def sample_parameters(n_sets, random_seed=42):
     
     # Handle dependency: th_ROS_epith_recover must be > th_ROS_microbe
     # Scale it to be between th_ROS_microbe and 1.0
-    th_ROS_epith_recover = th_ROS_microbe + (1.0 - th_ROS_microbe) * th_ROS_epith_recover_raw
+    # th_ROS_epith_recover = th_ROS_microbe + (1.0 - th_ROS_microbe) * th_ROS_epith_recover_raw
     
     # Handle discrete parameter: active_age_limit
     # Use LHS for continuous [0,1], then map to discrete range

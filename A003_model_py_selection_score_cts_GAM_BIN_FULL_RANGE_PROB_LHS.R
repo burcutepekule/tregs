@@ -11,15 +11,18 @@ library(mgcv)
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 df_params  = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range_LHS/sampled_parameters.csv', show_col_types = FALSE)
 df_raw     = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_full_range_LHS.rds')
+df_raw$tol = 25*0.05
 
-df_model    = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON')
-# df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large') & abs(mean_diff)>tol, 1, 0))
-df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large'), 1, 0))
+df_model    = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type=='sterile')
+df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large') & abs(mean_diff)>tol, 1, 0))
+# df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(abs(mean_diff)>0, 1, 0))
+
 df_model    = merge(df_model, df_params, by='param_set_id')
 
 #-- to check
 df_model_nz = df_model %>% dplyr::filter(nonzero==1)
 df_model_z  = df_model %>% dplyr::filter(nonzero==0)
+dim(df_model_nz)[1]/dim(df_model_z)[1] # ~1?
 
 # All parameter names (exactly as in your model)
 param_names <- c(
@@ -50,7 +53,7 @@ param_names <- c(
 )
 
 # Output folder for saving plots
-outdir <- "/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range/gam_histograms"
+outdir <- "/Users/burcutepekule/Desktop/tregs/mass_sim_results/gam_histograms"
 dir.create(outdir, showWarnings = FALSE)
 
 # Function to create one histogram plot for a given parameter
@@ -125,7 +128,7 @@ plot(gam_binom_counts, pages=1, shade=TRUE)   # visualize smooth effects
 gam.check(gam_binom_counts)    # residual diagnostics
 
 dev.off()
-plot(gam_binom_counts, select = 2, shade = TRUE, seWithMean = TRUE, rug = TRUE)
+plot(gam_binom_counts, select = 3, shade = TRUE, seWithMean = TRUE, rug = TRUE)
 
 # 🧩 Goal: You want to sample new parameter sets more intelligently —
 # not purely random, but biased toward regions where the predicted activation probability ≈ 0.5
