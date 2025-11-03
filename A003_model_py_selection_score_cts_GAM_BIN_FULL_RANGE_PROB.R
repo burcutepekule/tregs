@@ -10,7 +10,6 @@ library(mgcv)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 df_params  = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range/sampled_parameters.csv', show_col_types = FALSE)
-df_summary = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_full_range.rds')
 df_raw     = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_full_range.rds')
 
 df_model    = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON')
@@ -68,18 +67,18 @@ plot_param_distribution <- function(param) {
     theme_minimal(base_size = 13)
 }
 
-# Loop through all parameters, plot and save
-walk(param_names, function(param) {
-  p <- plot_param_distribution(param)
-  ggsave(
-    filename = file.path(outdir, paste0(param, "_histogram.png")),
-    plot = p,
-    width = 6,
-    height = 4,
-    dpi = 300
-  )
-  message("✅ Saved: ", param)
-})
+# # Loop through all parameters, plot and save
+# walk(param_names, function(param) {
+#   p <- plot_param_distribution(param)
+#   ggsave(
+#     filename = file.path(outdir, paste0(param, "_histogram.png")),
+#     plot = p,
+#     width = 6,
+#     height = 4,
+#     dpi = 300
+#   )
+#   message("✅ Saved: ", param)
+# })
 
 table(df_model$nonzero)
 
@@ -92,32 +91,33 @@ df_agg = df_model %>%
     .groups="drop"
   )
 
-# This naturally handles different numbers of replicates per param set.
-# If there’s extra-binomial variation, try family = quasibinomial as a robustness check.
+# # This naturally handles different numbers of replicates per param set.
+# # If there’s extra-binomial variation, try family = quasibinomial as a robustness check.
+# 
+# # models the probability that a given parameter set produces a nonzero outcome across its replicates.
+# gam_binom_counts <- gam(
+#   cbind(nonzero_n, zero_n) ~
+#     s(th_ROS_microbe, bs="cs") +
+#     s(th_ROS_epith_recover, bs="cs") +
+#     s(epith_recovery_chance, bs="cs") +
+#     s(rat_com_pat_threshold, bs="cs") +
+#     s(diffusion_speed_DAMPs, bs="cs") +
+#     s(diffusion_speed_SAMPs, bs="cs") +
+#     s(diffusion_speed_ROS, bs="cs") +
+#     s(add_ROS, bs="cs") + s(add_DAMPs, bs="cs") + s(add_SAMPs, bs="cs") +
+#     s(ros_decay, bs="cs") + s(DAMPs_decay, bs="cs") + s(SAMPs_decay, bs="cs") +
+#     s(activation_threshold_DAMPs, bs="cs") + s(activation_threshold_SAMPs, bs="cs") +
+#     s(activity_engulf_M0_baseline, bs="cs") + s(activity_engulf_M1_baseline, bs="cs") +
+#     s(activity_engulf_M2_baseline, bs="cs") + s(activity_ROS_M1_baseline, bs="cs") +
+#     s(rate_leak_commensal_injury, bs="cs") + s(rate_leak_pathogen_injury, bs="cs") +
+#     s(rate_leak_commensal_baseline, bs="cs") + s(active_age_limit, bs="cs") +
+#     s(treg_discrimination_efficiency, bs="cs"),
+#   data   = df_agg,
+#   family = binomial,
+#   method = "REML"
+# )
 
-
-# models the probability that a given parameter set produces a nonzero outcome across its replicates.
-gam_binom_counts <- gam(
-  cbind(nonzero_n, zero_n) ~
-    s(th_ROS_microbe, bs="cs") +
-    s(th_ROS_epith_recover, bs="cs") +
-    s(epith_recovery_chance, bs="cs") +
-    s(rat_com_pat_threshold, bs="cs") +
-    s(diffusion_speed_DAMPs, bs="cs") +
-    s(diffusion_speed_SAMPs, bs="cs") +
-    s(diffusion_speed_ROS, bs="cs") +
-    s(add_ROS, bs="cs") + s(add_DAMPs, bs="cs") + s(add_SAMPs, bs="cs") +
-    s(ros_decay, bs="cs") + s(DAMPs_decay, bs="cs") + s(SAMPs_decay, bs="cs") +
-    s(activation_threshold_DAMPs, bs="cs") + s(activation_threshold_SAMPs, bs="cs") +
-    s(activity_engulf_M0_baseline, bs="cs") + s(activity_engulf_M1_baseline, bs="cs") +
-    s(activity_engulf_M2_baseline, bs="cs") + s(activity_ROS_M1_baseline, bs="cs") +
-    s(rate_leak_commensal_injury, bs="cs") + s(rate_leak_pathogen_injury, bs="cs") +
-    s(rate_leak_commensal_baseline, bs="cs") + s(active_age_limit, bs="cs") +
-    s(treg_discrimination_efficiency, bs="cs"),
-  data   = df_agg,
-  family = binomial,
-  method = "REML"
-)
+gam_binom_counts = readRDS('gam_binom_counts.rds')
 
 summary(gam_binom_counts)      # see which predictors matter
 plot(gam_binom_counts, pages=1, shade=TRUE)   # visualize smooth effects
@@ -156,7 +156,8 @@ abline(h = 0.5, col = "red", lty = 2)
 num_cols <- param_names
 num_cols <- setdiff(num_cols, c("nonzero"))  # exclude outcome
 
-alpha   <- 0.10         # keep middle 80% of the nonzero distribution
+# alpha   <- 0.10         # keep middle 80% of the nonzero distribution
+alpha   <- 0.25         # keep middle 50% of the nonzero distribution
 margin  <- 0.05         # widen each side by 5% of full range
 
 full_min <- sapply(df_model[num_cols], min, na.rm=TRUE)
@@ -195,5 +196,79 @@ walk(param_names, function(param) {
 })
 
 
-new_bounds_use = new_bounds[,2:3]
-new_bounds_use = round(new_bounds_use, 2)
+new_bounds_use = new_bounds[,1:3]
+new_bounds_use$new_hi = round(new_bounds_use$new_hi , 2)
+new_bounds_use$new_lo = round(new_bounds_use$new_lo , 2)
+new_bounds_use_constraint = new_bounds_use %>% filter(var %in% c('th_ROS_epith_recover',
+                                                                 'epith_recovery_chance',
+                                                                 'ros_decay','DAMPs_decay'))
+
+############
+
+library(dplyr)
+library(purrr)
+
+num_cols <- setdiff(param_names, "nonzero")
+
+# function to find the best quarter of the range for nonzero==1
+find_best_quarter <- function(param, outcome, bins = 50) {
+  df <- tibble(param = param, nonzero = outcome) %>%
+    mutate(bin = ntile(param, bins)) %>%
+    group_by(bin) %>%
+    summarise(
+      prob_nonzero = mean(nonzero, na.rm = TRUE),
+      lo = min(param, na.rm = TRUE),
+      hi = max(param, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # slide over consecutive bins to get 25% of total bins
+  win_size <- ceiling(bins * 0.25)
+  if (nrow(df) <= win_size) return(c(min(param), max(param)))
+  
+  # compute rolling mean of nonzero probability
+  roll_means <- zoo::rollapply(df$prob_nonzero, win_size, mean, align = "left", fill = NA)
+  best_start <- which.max(roll_means)
+  
+  best_lo <- df$lo[best_start]
+  best_hi <- df$hi[min(best_start + win_size - 1, nrow(df))]
+  c(best_lo, best_hi)
+}
+
+# compute new bounds for each numeric parameter
+new_bounds <- map_dfr(num_cols, function(v) {
+  best_range <- find_best_quarter(df_model[[v]], df_model$nonzero)
+  full_min <- min(df_model[[v]], na.rm = TRUE)
+  full_max <- max(df_model[[v]], na.rm = TRUE)
+  tibble(var = v, new_lo = best_range[1], new_hi = best_range[2], full_min, full_max)
+})
+
+new_bounds
+# Loop through all parameters, plot and save
+walk(param_names, function(param) {
+  p = plot_param_distribution(param)
+  new_bounds_var = new_bounds %>% filter(var==param)
+  lo = new_bounds_var$new_lo
+  hi = new_bounds_var$new_hi
+  p  = p +
+    geom_vline(xintercept = lo, color = "red", linetype = "dashed", linewidth = 0.6) +
+    geom_vline(xintercept = hi, color = "red", linetype = "dashed", linewidth = 0.6)
+  
+  ggsave(
+    filename = file.path(outdir, paste0(param, "_histogram.png")),
+    plot = p,
+    width = 6,
+    height = 4,
+    dpi = 300
+  )
+  message("✅ Saved with bounds: ", param, " [", round(lo,3), ", ", round(hi,3), "]")
+})
+
+
+new_bounds_use = new_bounds[,1:3]
+new_bounds_use$new_hi = round(new_bounds_use$new_hi , 2)
+new_bounds_use$new_lo = round(new_bounds_use$new_lo , 2)
+new_bounds_use_constraint = new_bounds_use %>% filter(var %in% c(
+                                                                 'epith_recovery_chance',
+                                                                 'ros_decay','DAMPs_decay'))
+

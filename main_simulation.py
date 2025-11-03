@@ -14,13 +14,13 @@ import numba
 np.random.seed(42)
 
 def initialize_parameters():
-    """Initialize all simulation parameterss."""
+    """Initialize all simulation parameters."""
     params = {}
     
     # Grid parameters
     params['grid_size'] = 25
     params['t_max'] = 500
-    
+
     # Agent counts
     params['n_phagocytes'] = round(params['grid_size'] * params['grid_size'] * 0.35)
     params['n_tregs'] = round(params['grid_size'] * params['grid_size'] * 0.35)

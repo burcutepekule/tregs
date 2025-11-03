@@ -18,6 +18,8 @@ import argparse
 import time
 from main_simulation import initialize_parameters, run_simulation
 import random
+from scipy.stats import qmc
+
 
 def sample_parameters(n_sets, random_seed=42):
     """
@@ -26,89 +28,80 @@ def sample_parameters(n_sets, random_seed=42):
     """
     np.random.seed(random_seed)
     
-    # # Sample all parameters -- OLD, FULL RANGE
-    # th_ROS_microbe = np.random.uniform(0, 0.5, n_sets)
-    # th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 1.0)  # Must be > th_ROS_microbe
-    # epith_recovery_chance = np.random.uniform(0, 1, n_sets)
-    # rat_com_pat_threshold = np.random.uniform(0.5, 1, n_sets)  # At least above half
-
-    # # Diffusion speeds (MUST be < 0.125 for stability!)
-    # diffusion_speed_DAMPs = np.random.uniform(0, 0.12, n_sets)
-    # diffusion_speed_SAMPs = np.random.uniform(0, 0.12, n_sets)
-    # diffusion_speed_ROS = np.random.uniform(0, 0.12, n_sets)
-
-    # # Signal production rates
-    # add_ROS = np.random.uniform(0, 1, n_sets)
-    # add_DAMPs = np.random.uniform(0, 1, n_sets)
-    # add_SAMPs = np.random.uniform(0, 1, n_sets)
-
-    # # Decay rates
-    # DAMPs_decay = np.random.uniform(0, 1, n_sets)
-    # SAMPs_decay = np.random.uniform(0, 1, n_sets)
-    # ros_decay = np.random.uniform(0, 1, n_sets)
-
-    # # Activation thresholds
-    # activation_threshold_DAMPs = np.random.uniform(0, 1, n_sets)
-    # activation_threshold_SAMPs = np.random.uniform(0, 1, n_sets)
-
-    # # Engulfing and ROS rates - baseline is max 50% of capacity
-    # activity_engulf_M0_baseline = np.random.uniform(0, 0.5, n_sets)
-    # activity_engulf_M1_baseline = np.random.uniform(0, 0.5, n_sets)
-    # activity_engulf_M2_baseline = np.random.uniform(0, 0.5, n_sets)
-    # activity_ROS_M1_baseline = np.random.uniform(0, 0.5, n_sets)
-
-    # # Leakage rates
-    # rate_leak_commensal_injury = np.random.uniform(0.5, 1, n_sets)
-    # rate_leak_pathogen_injury = np.random.uniform(0.5, 1, n_sets)
-    # rate_leak_commensal_baseline = np.random.uniform(0.0, 0.25, n_sets)
-
-    # # Active age limit (discrete values 3-30)
-    # active_age_limit = np.random.randint(3, 31, n_sets)
-
-    # # Treg discrimination efficiency
-    # treg_discrimination_efficiency = np.random.uniform(0, 1, n_sets)
-
-    # Sample all parameters --- NEW, FOR BALANCED 0/1 DATASET
-    th_ROS_microbe = np.random.uniform(0, 0.5, n_sets)
-    th_ROS_epith_recover = np.random.uniform(th_ROS_microbe, 1.0)  # Must be > th_ROS_microbe
-    epith_recovery_chance = np.random.uniform(0, 0.4, n_sets)
-    rat_com_pat_threshold = np.random.uniform(0.5, 1, n_sets)  # At least above half
-
-    # Diffusion speeds (MUST be < 0.125 for stability!)
-    diffusion_speed_DAMPs = np.random.uniform(0, 0.12, n_sets)
-    diffusion_speed_SAMPs = np.random.uniform(0, 0.12, n_sets)
-    diffusion_speed_ROS = np.random.uniform(0, 0.12, n_sets)
-
-    # Signal production rates
-    add_ROS = np.random.uniform(0, 1, n_sets)
-    add_DAMPs = np.random.uniform(0, 1, n_sets)
-    add_SAMPs = np.random.uniform(0, 1, n_sets)
-
-    # Decay rates
-    DAMPs_decay = np.random.uniform(0, 0.25, n_sets)
-    SAMPs_decay = np.random.uniform(0, 1, n_sets)
-    ros_decay = np.random.uniform(0, 0.25, n_sets)
-
-    # Activation thresholds
-    activation_threshold_DAMPs = np.random.uniform(0, 1, n_sets)
-    activation_threshold_SAMPs = np.random.uniform(0, 1, n_sets)
-
-    # Engulfing and ROS rates - baseline is max 50% of capacity
-    activity_engulf_M0_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_engulf_M1_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_engulf_M2_baseline = np.random.uniform(0, 0.5, n_sets)
-    activity_ROS_M1_baseline = np.random.uniform(0, 0.5, n_sets)
-
-    # Leakage rates
-    rate_leak_commensal_injury = np.random.uniform(0.5, 1, n_sets)
-    rate_leak_pathogen_injury = np.random.uniform(0.5, 1, n_sets)
-    rate_leak_commensal_baseline = np.random.uniform(0.0, 0.25, n_sets)
-
-    # Active age limit (discrete values 3-30)
-    active_age_limit = np.random.randint(3, 31, n_sets)
-
-    # Treg discrimination efficiency
-    treg_discrimination_efficiency = np.random.uniform(0, 1, n_sets)
+    # Define the parameter bounds
+    # Note: Some parameters have dependencies which we'll handle separately
+    param_bounds = [
+        (0, 0.5),      # th_ROS_microbe
+        (0, 1.0),      # th_ROS_epith_recover (will be adjusted)
+        (0, 1),        # epith_recovery_chance
+        (0.5, 1),      # rat_com_pat_threshold
+        (0, 0.12),     # diffusion_speed_DAMPs
+        (0, 0.12),     # diffusion_speed_SAMPs
+        (0, 0.12),     # diffusion_speed_ROS
+        (0, 1),        # add_ROS
+        (0, 1),        # add_DAMPs
+        (0, 1),        # add_SAMPs
+        (0, 1),        # DAMPs_decay
+        (0, 1),        # SAMPs_decay
+        (0, 1),        # ros_decay
+        (0, 1),        # activation_threshold_DAMPs
+        (0, 1),        # activation_threshold_SAMPs
+        (0, 0.5),      # activity_engulf_M0_baseline
+        (0, 0.5),      # activity_engulf_M1_baseline
+        (0, 0.5),      # activity_engulf_M2_baseline
+        (0, 0.5),      # activity_ROS_M1_baseline
+        (0.5, 1),      # rate_leak_commensal_injury
+        (0.5, 1),      # rate_leak_pathogen_injury
+        (0, 0.25),     # rate_leak_commensal_baseline
+        (0, 1),        # treg_discrimination_efficiency
+    ]
+        # Create LHS sampler
+    sampler = qmc.LatinHypercube(d=len(param_bounds))
+    
+    # Generate samples in [0,1]^d
+    sample = sampler.random(n=n_sets)
+    
+    # Scale to actual parameter ranges
+    lower_bounds = np.array([b[0] for b in param_bounds])
+    upper_bounds = np.array([b[1] for b in param_bounds])
+    scaled_sample = qmc.scale(sample, lower_bounds, upper_bounds)
+    
+    # Extract individual parameters
+    idx = 0
+    th_ROS_microbe = scaled_sample[:, idx]; idx += 1
+    th_ROS_epith_recover_raw = scaled_sample[:, idx]; idx += 1
+    epith_recovery_chance = scaled_sample[:, idx]; idx += 1
+    rat_com_pat_threshold = scaled_sample[:, idx]; idx += 1
+    diffusion_speed_DAMPs = scaled_sample[:, idx]; idx += 1
+    diffusion_speed_SAMPs = scaled_sample[:, idx]; idx += 1
+    diffusion_speed_ROS = scaled_sample[:, idx]; idx += 1
+    add_ROS = scaled_sample[:, idx]; idx += 1
+    add_DAMPs = scaled_sample[:, idx]; idx += 1
+    add_SAMPs = scaled_sample[:, idx]; idx += 1
+    DAMPs_decay = scaled_sample[:, idx]; idx += 1
+    SAMPs_decay = scaled_sample[:, idx]; idx += 1
+    ros_decay = scaled_sample[:, idx]; idx += 1
+    activation_threshold_DAMPs = scaled_sample[:, idx]; idx += 1
+    activation_threshold_SAMPs = scaled_sample[:, idx]; idx += 1
+    activity_engulf_M0_baseline = scaled_sample[:, idx]; idx += 1
+    activity_engulf_M1_baseline = scaled_sample[:, idx]; idx += 1
+    activity_engulf_M2_baseline = scaled_sample[:, idx]; idx += 1
+    activity_ROS_M1_baseline = scaled_sample[:, idx]; idx += 1
+    rate_leak_commensal_injury = scaled_sample[:, idx]; idx += 1
+    rate_leak_pathogen_injury = scaled_sample[:, idx]; idx += 1
+    rate_leak_commensal_baseline = scaled_sample[:, idx]; idx += 1
+    treg_discrimination_efficiency = scaled_sample[:, idx]; idx += 1
+    
+    # Handle dependency: th_ROS_epith_recover must be > th_ROS_microbe
+    # Scale it to be between th_ROS_microbe and 1.0
+    th_ROS_epith_recover = th_ROS_microbe + (1.0 - th_ROS_microbe) * th_ROS_epith_recover_raw
+    
+    # Handle discrete parameter: active_age_limit
+    # Use LHS for continuous [0,1], then map to discrete range
+    age_sampler = qmc.LatinHypercube(d=1, seed=random_seed+1 if random_seed else None)
+    active_age_sample = age_sampler.random(n=n_sets)[:, 0]
+    active_age_limit = np.floor(3 + active_age_sample * 28).astype(int)
+    
 
     # Create DataFrame
     params_df = pd.DataFrame({

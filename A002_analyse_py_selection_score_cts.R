@@ -8,12 +8,13 @@ library(stringr)
 library(zoo)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
-# df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range.rds')
-df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range.rds')
+# df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
 
 df_raw_keep = df_raw
+hist(df_raw_keep$ss_start)
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-ss_start_threshold   = 250
+ss_start_threshold   = 750
 param_id_all_below = df_raw %>%
   dplyr::group_by(param_set_id) %>%
   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
@@ -54,6 +55,8 @@ df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log(1+abs_cohens_d*a
 # df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log10(1+abs_cohens_d*abs(mean_diff)))
 
 hist(df_raw$outcome,30)
+hist(sign(df_raw$mean_diff)*log10(abs(1+df_raw$mean_diff)),30)
+table(round(df_raw$mean_diff))
 
 # df_raw_non_negligible = df_raw %>% dplyr::filter(effect_size %in% c("Medium", "Large"))
 
@@ -68,6 +71,7 @@ df_summary = df_raw %>%
     n_negligible = sum(effect_size %in% c("Negligible", "Small")),
     .groups = "drop"
   )
+
 
 df_summary = df_summary %>% dplyr::mutate(selection_score = outcome_mean)
 df_summary$tol = tol
