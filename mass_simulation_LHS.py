@@ -69,7 +69,8 @@ def sample_parameters(n_sets, random_seed=42):
     # Extract individual parameters
     idx = 0
     th_ROS_microbe = scaled_sample[:, idx]; idx += 1
-    th_ROS_epith_recover_raw = scaled_sample[:, idx]; idx += 1
+    #th_ROS_epith_recover_raw = scaled_sample[:, idx]; idx += 1
+    th_ROS_epith_recover = scaled_sample[:, idx]; idx += 1
     epith_recovery_chance = scaled_sample[:, idx]; idx += 1
     rat_com_pat_threshold = scaled_sample[:, idx]; idx += 1
     diffusion_speed_DAMPs = scaled_sample[:, idx]; idx += 1
