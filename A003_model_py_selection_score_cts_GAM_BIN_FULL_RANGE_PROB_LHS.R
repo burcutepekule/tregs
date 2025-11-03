@@ -9,11 +9,12 @@ library(zoo)
 library(mgcv)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
-df_params  = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range/sampled_parameters.csv', show_col_types = FALSE)
-df_raw     = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_full_range.rds')
+df_params  = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_full_range_LHS/sampled_parameters.csv', show_col_types = FALSE)
+df_raw     = readRDS('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_full_range_LHS.rds')
 
 df_model    = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON')
-df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large') & abs(mean_diff)>tol, 1, 0))
+# df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large') & abs(mean_diff)>tol, 1, 0))
+df_model    = df_model %>% dplyr::mutate(nonzero=ifelse(effect_size %in% c('Medium','Large'), 1, 0))
 df_model    = merge(df_model, df_params, by='param_set_id')
 
 #-- to check
@@ -91,33 +92,33 @@ df_agg = df_model %>%
     .groups="drop"
   )
 
-# # This naturally handles different numbers of replicates per param set.
-# # If there’s extra-binomial variation, try family = quasibinomial as a robustness check.
-# 
-# # models the probability that a given parameter set produces a nonzero outcome across its replicates.
-# gam_binom_counts <- gam(
-#   cbind(nonzero_n, zero_n) ~
-#     s(th_ROS_microbe, bs="cs") +
-#     s(th_ROS_epith_recover, bs="cs") +
-#     s(epith_recovery_chance, bs="cs") +
-#     s(rat_com_pat_threshold, bs="cs") +
-#     s(diffusion_speed_DAMPs, bs="cs") +
-#     s(diffusion_speed_SAMPs, bs="cs") +
-#     s(diffusion_speed_ROS, bs="cs") +
-#     s(add_ROS, bs="cs") + s(add_DAMPs, bs="cs") + s(add_SAMPs, bs="cs") +
-#     s(ros_decay, bs="cs") + s(DAMPs_decay, bs="cs") + s(SAMPs_decay, bs="cs") +
-#     s(activation_threshold_DAMPs, bs="cs") + s(activation_threshold_SAMPs, bs="cs") +
-#     s(activity_engulf_M0_baseline, bs="cs") + s(activity_engulf_M1_baseline, bs="cs") +
-#     s(activity_engulf_M2_baseline, bs="cs") + s(activity_ROS_M1_baseline, bs="cs") +
-#     s(rate_leak_commensal_injury, bs="cs") + s(rate_leak_pathogen_injury, bs="cs") +
-#     s(rate_leak_commensal_baseline, bs="cs") + s(active_age_limit, bs="cs") +
-#     s(treg_discrimination_efficiency, bs="cs"),
-#   data   = df_agg,
-#   family = binomial,
-#   method = "REML"
-# )
+# This naturally handles different numbers of replicates per param set.
+# If there’s extra-binomial variation, try family = quasibinomial as a robustness check.
 
-# gam_binom_counts = readRDS('gam_binom_counts.rds')
+# models the probability that a given parameter set produces a nonzero outcome across its replicates.
+gam_binom_counts <- gam(
+  cbind(nonzero_n, zero_n) ~
+    s(th_ROS_microbe, bs="cs") +
+    s(th_ROS_epith_recover, bs="cs") +
+    s(epith_recovery_chance, bs="cs") +
+    s(rat_com_pat_threshold, bs="cs") +
+    s(diffusion_speed_DAMPs, bs="cs") +
+    s(diffusion_speed_SAMPs, bs="cs") +
+    s(diffusion_speed_ROS, bs="cs") +
+    s(add_ROS, bs="cs") + s(add_DAMPs, bs="cs") + s(add_SAMPs, bs="cs") +
+    s(ros_decay, bs="cs") + s(DAMPs_decay, bs="cs") + s(SAMPs_decay, bs="cs") +
+    s(activation_threshold_DAMPs, bs="cs") + s(activation_threshold_SAMPs, bs="cs") +
+    s(activity_engulf_M0_baseline, bs="cs") + s(activity_engulf_M1_baseline, bs="cs") +
+    s(activity_engulf_M2_baseline, bs="cs") + s(activity_ROS_M1_baseline, bs="cs") +
+    s(rate_leak_commensal_injury, bs="cs") + s(rate_leak_pathogen_injury, bs="cs") +
+    s(rate_leak_commensal_baseline, bs="cs") + s(active_age_limit, bs="cs") +
+    s(treg_discrimination_efficiency, bs="cs"),
+  data   = df_agg,
+  family = binomial,
+  method = "REML"
+)
+
+# gam_binom_counts = readRDS('gam_binom_counts_full_range_RND.rds')
 
 summary(gam_binom_counts)      # see which predictors matter
 plot(gam_binom_counts, pages=1, shade=TRUE)   # visualize smooth effects

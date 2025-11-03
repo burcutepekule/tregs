@@ -73,8 +73,7 @@ path      = "/Users/burcutepekule/Desktop/tregs/mass_sim_results/"
 files     = list.files(path, pattern = "^simulation_results_param_set_\\d+\\.csv$", full.names = TRUE)
 indices   = str_extract(basename(files), "\\d+") |> as.numeric()
 max_index = max(indices, na.rm = TRUE)
-# t_max_ind = 500 # max 500 time points
-t_max_ind = 1000 # max 500 time points
+t_max_ind = 500 # max 500 time points
 
 # Initialize an empty results dataframe before the loop
 all_comparison_results = data.frame()
