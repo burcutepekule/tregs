@@ -1,4 +1,4 @@
-rm(list=ls())
+# rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -8,30 +8,31 @@ library(stringr)
 library(zoo)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
-df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range.rds')
-
+df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+hist(df_raw$mean_diff)
 df_raw_keep = df_raw
 
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-ss_start_threshold   = 250
 param_id_all_below = df_raw %>%
   dplyr::group_by(param_set_id) %>%
   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
   dplyr::filter(all_below) %>%
   dplyr::pull(param_set_id)
 df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
+hist(df_raw$mean_diff)
 
-#----- filter based on replicate_id, less than 10 means incomplete!
-param_id_all_complete = df_raw %>%
-  dplyr::group_by(param_set_id, comparison, injury_type) %>%
-  dplyr::summarise(all_complete = (n_distinct(replicate_id) == 10), .groups = "drop") %>%
-  dplyr::group_by(param_set_id) %>%
-  dplyr::summarise(all_complete = all(all_complete), .groups = "drop") %>%
-  dplyr::filter(all_complete) %>%
-  dplyr::pull(param_set_id)
-df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_complete)
+# #### --- relax?
+# #----- filter based on replicate_id, less than 10 means incomplete!
+# param_id_all_complete = df_raw %>%
+#   dplyr::group_by(param_set_id, comparison, injury_type) %>%
+#   dplyr::summarise(all_complete = (n_distinct(replicate_id) == 10), .groups = "drop") %>%
+#   dplyr::group_by(param_set_id) %>%
+#   dplyr::summarise(all_complete = all(all_complete), .groups = "drop") %>%
+#   dplyr::filter(all_complete) %>%
+#   dplyr::pull(param_set_id)
+# df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_complete)
 
-length(unique(df_raw$param_set_id)) #217
+length(unique(df_raw$param_set_id))
 
 df_raw     = df_raw %>% dplyr::mutate(abs_cohens_d = abs(cohens_d))
 df_raw     = df_raw %>% dplyr::mutate(effect_size = case_when(
@@ -54,6 +55,15 @@ df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log(1+abs_cohens_d*a
 # df_raw = df_raw %>% dplyr::mutate(outcome = sign(mean_diff)*log10(1+abs_cohens_d*abs(mean_diff)))
 
 hist(df_raw$outcome,30)
+hist(df_raw$mean_diff,30)
+# hist(sign(df_raw$mean_diff)*log10(abs(1+df_raw$mean_diff)),30)
+table(round(df_raw$mean_diff,3))
+
+tol = 25*0.25 # at least 5%
+x = round(df_raw$mean_diff,3)
+round(100*sum(x<=tol & x>=(-1*tol))/length(x),2)
+round(100*sum(x>tol)/length(x),2)
+round(100*sum(x<(-1*tol))/length(x),2)
 
 # df_raw_non_negligible = df_raw %>% dplyr::filter(effect_size %in% c("Medium", "Large"))
 

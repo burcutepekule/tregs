@@ -1,0 +1,30 @@
+GCE Instance Information
+========================
+
+Instance Name: tregs-simulation-32core
+Zone: us-central1-a
+Machine Type: n2-highcpu-32
+Spot/Preemptible: N
+Project: tregs0000
+Created: Mon Nov  3 16:27:44 CET 2025
+
+Quick Commands:
+---------------
+
+SSH:
+  gcloud compute ssh tregs-simulation-32core --zone=us-central1-a
+
+Stop:
+  gcloud compute instances stop tregs-simulation-32core --zone=us-central1-a
+
+Start:
+  gcloud compute instances start tregs-simulation-32core --zone=us-central1-a
+
+Delete:
+  gcloud compute instances delete tregs-simulation-32core --zone=us-central1-a
+
+Download Results:
+  gcloud compute scp --recurse tregs-simulation-32core:~/tregs/mass_sim_results ./ --zone=us-central1-a
+
+View in Console:
+  https://console.cloud.google.com/compute/instances?project=tregs0000

@@ -31,8 +31,8 @@ def sample_parameters(n_sets, random_seed=42):
     # Define the parameter bounds
     # Note: Some parameters have dependencies which we'll handle separately
     param_bounds = [
-        (0, 1),        # th_ROS_microbe
-        (0, 1),        # th_ROS_epith_recover (will be adjusted)
+        (0, 1),        # th_ROS_microbe: above, microbes are killed
+        (0, 1),        # th_ROS_epith_recover: above, epithelial injury score =+1
         (0, 1),        # epith_recovery_chance
         (0.5, 1),      # rat_com_pat_threshold
         (0, 0.12),     # diffusion_speed_DAMPs

@@ -1,6 +1,6 @@
-rm(list=ls())
-library(dplyr)
-library(tidyr)
+# rm(list=ls())
+# library(dplyr)
+# library(tidyr)
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 scenarios      = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/scenarios.csv', show_col_types = FALSE)
 
@@ -8,8 +8,8 @@ scenarios      = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/s
 params           = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/sampled_parameters.csv', show_col_types = FALSE)
 
 
-param_id     = 20
-rep_ind      = 2
+param_id     = 1776
+rep_ind      = 5
 
 results      = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results/simulation_results_param_set_',param_id,'.csv'), show_col_types = FALSE)
 results_plot = results %>% left_join(params, by = 'param_set_id') 
