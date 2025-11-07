@@ -10,20 +10,23 @@ library(zoo)
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 # df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range_RND.rds')
 # df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_full_range_LHS.rds')
-df_raw      = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
-hist(df_raw$mean_diff, 30)
+t_max  = 500
+df_raw = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+df_raw = df_raw %>% dplyr::mutate(log_integ_diff = sign(integ_diff)*log(1+abs(integ_diff))/(t_max-ss_start))
+hist(df_raw$log_integ_diff, 15)
+length(unique(df_raw$param_set_id))
+
 
 df_raw_keep = df_raw
-hist(df_raw_keep$ss_start)
+
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-ss_start_threshold   = 450
+ss_start_threshold   = 150
 param_id_all_below = df_raw %>%
   dplyr::group_by(param_set_id) %>%
   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
   dplyr::filter(all_below) %>%
   dplyr::pull(param_set_id)
 df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
-hist(df_raw$mean_diff) # here you lose the very large ones
 
 #----- filter based on replicate_id, less than 10 means incomplete!
 param_id_all_complete = df_raw %>%
@@ -35,7 +38,8 @@ param_id_all_complete = df_raw %>%
   dplyr::pull(param_set_id)
 df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_complete)
 
-length(unique(df_raw$param_set_id)) #217
+length(unique(df_raw$param_set_id)) 
+hist(df_raw$log_integ_diff, 15)
 
 df_raw     = df_raw %>% dplyr::mutate(abs_cohens_d = abs(cohens_d))
 df_raw     = df_raw %>% dplyr::mutate(effect_size = case_when(
@@ -62,13 +66,15 @@ hist(df_raw$mean_diff,30)
 # hist(sign(df_raw$mean_diff)*log10(abs(1+df_raw$mean_diff)),30)
 table(round(df_raw$mean_diff,3))
 
-tol = 25*0.25 # at least 5%
-x = round(df_raw$mean_diff,3)
+tol = 0 # at least 5%
+hist(x)
+x   = df_raw$log_integ_diff
 round(100*sum(x<=tol & x>=(-1*tol))/length(x),2)
 round(100*sum(x>tol)/length(x),2)
 round(100*sum(x<(-1*tol))/length(x),2)
 
 # df_raw_non_negligible = df_raw %>% dplyr::filter(effect_size %in% c("Medium", "Large"))
+
 
 df_summary = df_raw %>%
   dplyr::group_by(param_set_id, injury_type, comparison) %>%
@@ -87,6 +93,6 @@ df_summary$tol = tol
 df_raw$tol = tol
 
 # saveRDS(df_summary, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_full_range.rds')
-saveRDS(df_summary, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_LHS.rds')
-saveRDS(df_raw, '/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_LHS.rds')
+saveRDS(df_summary, paste0('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_cts_',ss_start_threshold,'.rds'))
+saveRDS(df_raw, paste0('/Users/burcutepekule/Desktop/tregs/df_summary_selection_score_raw_',ss_start_threshold,'.rds'))
 
