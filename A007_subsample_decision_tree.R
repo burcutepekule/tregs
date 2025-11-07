@@ -119,7 +119,7 @@ library(dplyr)
 library(lhs)
 
 # Step 0: Define total samples first!
-n_total <- 9999
+n_total <- 12000
 n_per_category <- n_total / 3  # 3000 each
 
 # Step 1: Get node assignments and calculate outcome rates for each node
@@ -356,6 +356,8 @@ cat("\nParameter range check:\n")
 print(summary(balanced_lhs_dataset %>% select(all_of(param_names))))
 
 # Step 8: Export for your simulation
+balanced_lhs_dataset$param_set_id = 1:dim(balanced_lhs_dataset)[1]
+balanced_lhs_dataset = balanced_lhs_dataset[c('param_set_id',param_names)]
 write.csv(balanced_lhs_dataset, "balanced_lhs_parameters_for_simulation.csv")
 
 cat("\nDataset exported to: balanced_lhs_parameters_for_simulation.csv\n")
