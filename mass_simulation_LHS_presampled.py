@@ -1,12 +1,12 @@
 """
 Mass Parallel Simulation Framework - Pre-sampled Parameters
 
-Uses pre-sampled parameters from balanced_lhs_parameters_for_simulation.csv,
+Uses pre-sampled parameters from balanced_lhs_parameters.csv,
 generates scenarios, runs 100 replicates per parameter-scenario combination
 using multiprocessing.
 
 Usage:
-    python mass_simulation_LHS_presampled.py --csv_file balanced_lhs_parameters_for_simulation.csv --n_cores 10 --output_dir results/
+    python mass_simulation_LHS_presampled.py --csv_file balanced_lhs_parameters.csv --n_cores 10 --output_dir results/
 """
 
 import numpy as np
@@ -148,7 +148,7 @@ def run_single_simulation(args):
 
 
 def run_mass_simulations(csv_file, n_replicates=10, n_cores=10,
-                         output_dir='mass_sim_results', base_seed=42,
+                         output_dir='mass_sim_results_presampled', base_seed=42,
                          combine_at_end=False):
     """
     Main function to run mass parallel simulations with pre-sampled parameters.
@@ -278,14 +278,14 @@ def main():
         description='Run mass parallel simulations with pre-sampled parameters'
     )
     parser.add_argument('--csv_file', type=str,
-                       default='balanced_lhs_parameters_for_simulation.csv',
-                       help='CSV file with pre-sampled parameters (default: balanced_lhs_parameters_for_simulation.csv)')
+                       default='balanced_lhs_parameters.csv',
+                       help='CSV file with pre-sampled parameters (default: balanced_lhs_parameters.csv)')
     parser.add_argument('--n_replicates', type=int, default=10,
                        help='Number of replicates per parameter-scenario combo (default: 10)')
     parser.add_argument('--n_cores', type=int, default=min(10, cpu_count()),
                        help='Number of CPU cores to use (default: 10 or max available)')
-    parser.add_argument('--output_dir', type=str, default='mass_sim_results',
-                       help='Output directory (default: mass_sim_results)')
+    parser.add_argument('--output_dir', type=str, default='mass_sim_results_presampled',
+                       help='Output directory (default: mass_sim_results_presampled)')
     parser.add_argument('--base_seed', type=int, default=42,
                        help='Base random seed (default: 42)')
     parser.add_argument('--combine', action='store_true',

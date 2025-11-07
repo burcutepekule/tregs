@@ -1,0 +1,479 @@
+rm(list=ls())
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(purrr)
+library(readr)  # For read_csv
+library(stringr)
+library(zoo)
+library(mgcv)
+library(factoextra)
+library(cluster)
+
+source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
+df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
+df_params = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/sampled_parameters.csv', show_col_types = FALSE)
+
+inj_type             = 'sterile'
+ss_start_threshold   = 450
+t_max                = 500
+tol_in               = 25*0.25
+
+df_model = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
+df_model = inner_join(df_model, df_params, by='param_set_id')
+
+# filter based on ss_start, it cannot be too large otherwise not much to compare!
+param_id_all_below = df_model %>%
+  dplyr::group_by(param_set_id) %>%
+  dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
+  dplyr::filter(all_below) %>%
+  dplyr::pull(param_set_id)
+df_model = df_model %>% dplyr::filter(param_set_id %in% param_id_all_below)
+
+# #----- filter based on replicate_id, less than 10 means incomplete!
+# param_id_all_complete = df_model %>%
+#   dplyr::group_by(param_set_id, comparison, injury_type) %>%
+#   dplyr::summarise(all_complete = (n_distinct(replicate_id) == 10), .groups = "drop") %>%
+#   dplyr::group_by(param_set_id) %>%
+#   dplyr::summarise(all_complete = all(all_complete), .groups = "drop") %>%
+#   dplyr::filter(all_complete) %>%
+#   dplyr::pull(param_set_id)
+# df_model = df_model %>% dplyr::filter(param_set_id %in% param_id_all_complete)
+
+# Effect size based on cohens d -----------------------------------------
+df_model = df_model %>% dplyr::mutate(abs_cohens_d = abs(cohens_d))
+df_model = df_model %>% dplyr::mutate(effect_size = case_when(
+  abs_cohens_d < 0.2 ~ "Negligible",
+  abs_cohens_d < 0.5 & abs_cohens_d>= 0.2  ~ "Small",
+  abs_cohens_d < 0.8 & abs_cohens_d>= 0.5 ~ "Medium",
+  TRUE ~ "Large"
+))
+
+df_model$tol = tol_in
+df_summary = df_model %>%
+  dplyr::group_by(param_set_id, injury_type, comparison) %>%
+  dplyr::summarise(
+    n_better = sum(effect_size %in% c('Large','Medium') & mean_diff > tol, na.rm = TRUE),
+    n_drift  = sum((mean_diff <= tol & mean_diff >= -1*tol), na.rm = TRUE),
+    n_worse  = sum(effect_size %in% c('Large','Medium') & mean_diff < -1*tol, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+df_summary = inner_join(df_summary %>% dplyr::select(param_set_id, n_better, n_drift, n_worse), df_model, by='param_set_id')
+
+param_names = c(
+  "th_ROS_microbe",
+  "th_ROS_epith_recover",
+  "epith_recovery_chance",
+  "rat_com_pat_threshold",
+  "diffusion_speed_DAMPs",
+  "diffusion_speed_SAMPs",
+  "diffusion_speed_ROS",
+  "add_ROS",
+  "add_DAMPs",
+  "add_SAMPs",
+  "ros_decay",
+  "DAMPs_decay",
+  "SAMPs_decay",
+  "activation_threshold_DAMPs",
+  "activation_threshold_SAMPs",
+  "activity_engulf_M0_baseline",
+  "activity_engulf_M1_baseline",
+  "activity_engulf_M2_baseline",
+  "activity_ROS_M1_baseline",
+  "rate_leak_commensal_injury",
+  "rate_leak_pathogen_injury",
+  "rate_leak_commensal_baseline",
+  "active_age_limit",
+  "treg_discrimination_efficiency"
+)
+
+df_summary = df_summary %>%
+  dplyr::select(n_better, n_drift, n_worse, all_of(param_names)) %>%
+  distinct()
+
+# Create outcome proportions
+df_clustering = df_summary %>%
+  mutate(
+    total = n_better + n_drift + n_worse,
+    frac_better = div0(n_better,total),
+    frac_drift = div0(n_drift,total),
+    frac_worse = div0(n_worse,total)
+  )
+
+# round
+# df_clustering = df_clustering %>% mutate(across(all_of(param_names), ~ if(is.numeric(.x)) round(.x, 2) else .x))
+
+# Create a binary outcome: any selection vs pure drift
+df_clustering = df_clustering %>%
+  mutate(
+    dominant_outcome = case_when(
+      frac_better > frac_worse & frac_better > frac_drift ~ "better",
+      frac_worse > frac_better & frac_worse > frac_drift ~ "worse",
+      TRUE ~ "drift",
+    ),
+    dominant_outcome = factor(dominant_outcome, levels = c("drift", "better", "worse"))
+  )
+table(df_clustering$dominant_outcome)
+
+# # ---------- Conditional Inference Trees (CTree): These use statistical tests for splitting and handle interactions better:
+library(partykit)
+
+df_clustering = df_clustering %>%
+  mutate(dominant_outcome = factor(dominant_outcome, levels = c("better", "drift", "worse")))
+
+
+ctree_model = ctree(dominant_outcome ~ .,
+                    data = df_clustering %>% select(dominant_outcome, all_of(param_names)),
+                    control = ctree_control(
+                      # === Splitting criteria ===
+                      mincriterion = 0.90, # 1-p-value threshold (higher = stricter splits)
+                      # === Node size controls ===
+                      minsplit = 5,               # Min observations to attempt a split
+                      minbucket = 5,              # Min observations in terminal node
+                      maxdepth = 5,               # Max tree depth (0 = unlimited)
+                      testtype = "Univariate"    # Multiple testing correction
+                    ))
+
+png('tree_multiclass.png', width=2800,height=1800,units = 'px')
+plot(ctree_model, 
+     main = "Conditional Inference Tree",
+     type = "simple")
+dev.off()
+
+df_clustering = df_clustering %>% mutate(ctree_node = predict(ctree_model, type = "node"))
+
+#  Plot ctree with histograms at terminal nodes ---
+
+library(ggparty)
+library(ggplot2)
+
+p = ggparty(ctree_model) +
+  geom_edge() +
+  geom_edge_label() +
+  geom_node_label(
+    aes(label = paste0("Node ", id, "\nN = ", nodesize)),
+    size = 3.5,
+    fontface = "bold",
+    nudge_y = 0.02
+  ) +
+  theme_minimal(base_size = 14) +
+  geom_node_plot(
+    gglist = list(
+      # Use computed y within each node by grouping
+      geom_bar(
+        aes(
+          x = dominant_outcome,
+          y = after_stat(count / tapply(count, PANEL, sum)[PANEL]),
+          fill = dominant_outcome
+        ),
+        show.legend = FALSE
+      ),
+      scale_fill_manual(values = c("better" = "forestgreen","drift" = "gray70","worse" = "firebrick")),
+      scale_y_continuous(labels = scales::percent_format(accuracy = 1)),
+      theme_minimal(base_size = 10) +
+        theme(
+          axis.title = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          plot.margin = margin(0, 0, 0, 0)
+        )
+    ),
+    shared_axis_labels = FALSE
+  )
+ggsave("tree_multiclass_hist_norm.png", p, width = 28, height = 16, dpi = 300)
+
+
+node_summary_counts = df_clustering %>%
+  group_by(ctree_node, dominant_outcome) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(ctree_node) %>%
+  mutate(frac = n / sum(n)) %>%
+  ungroup() %>%
+  select(ctree_node, dominant_outcome, frac) %>%
+  pivot_wider(
+    names_from = dominant_outcome,
+    values_from = frac,
+    values_fill = 0
+  )
+
+# node_summary_counts = node_summary_counts %>% 
+#   dplyr::mutate(n_to_sample = round((1/sum_better*n_per_better)*proportion)) # HERE
+
+# # Function to extract path/rules for a given node
+# get_node_rules = function(tree, node_id) {
+#   # Get the path from root to the target node
+#   path = partykit:::.list.rules.party(tree, i = node_id)
+#   return(path)
+# }
+
+library(dplyr)
+library(lhs)
+
+# Your node statistics
+node_summary_counts = df_clustering %>%
+  group_by(ctree_node) %>%
+  summarise(
+    n = n(),
+    better = mean(dominant_outcome == "better"),
+    worse = mean(dominant_outcome == "worse"),
+    drift = mean(dominant_outcome == "drift"),
+    .groups = "drop"
+  )
+
+# be smarter than random sampling: simulated annealing
+# Objective function to minimize
+objective_function = function(random_integers, node_summary_counts) {
+  node_summary_counts_temp = node_summary_counts
+  node_summary_counts_temp$pop_size = round(random_integers)
+  
+  node_summary_counts_temp = node_summary_counts_temp %>%
+    mutate(
+      n_for_better = round(better * pop_size),
+      n_for_worse = round(worse * pop_size),
+      n_for_drift = round(drift * pop_size)
+    )
+  
+  all_sum = sum(node_summary_counts_temp$n_for_better + 
+                  node_summary_counts_temp$n_for_worse + 
+                  node_summary_counts_temp$n_for_drift)
+  
+  better_rat = sum(node_summary_counts_temp$n_for_better) / all_sum
+  worse_rat = sum(node_summary_counts_temp$n_for_worse) / all_sum
+  drift_rat = sum(node_summary_counts_temp$n_for_drift) / all_sum
+  
+  diff_rat = rep(1/3, 3) - c(better_rat, worse_rat, drift_rat)
+  # diff_rat = c(1/2,1/2,0) - c(better_rat, worse_rat, drift_rat)
+  diff_rat_euc = sqrt(sum(diff_rat^2))
+  
+  return(diff_rat_euc)
+}
+
+M = 10000
+current_solution = sample(1:M, size = nrow(node_summary_counts), replace = TRUE)
+current_score = objective_function(current_solution, node_summary_counts)
+
+best_solution = current_solution
+best_score = current_score
+
+temperature  = 100
+cooling_rate = 0.9
+
+for (iter in 1:100000) {
+  # Generate neighbor solution (modify one or more positions)
+  new_solution = current_solution
+  positions_to_change = sample(1:length(new_solution), size = sample(1:3, 1))
+  new_solution[positions_to_change] = sample(1:M, size = length(positions_to_change), replace = TRUE)
+  
+  new_score = objective_function(new_solution, node_summary_counts)
+  
+  # Accept or reject
+  if (new_score < current_score || runif(1) < exp((current_score - new_score) / temperature)) {
+    current_solution = new_solution
+    current_score = new_score
+    
+    if (current_score < best_score) {
+      best_solution = current_solution
+      best_score = current_score
+    }
+  }
+  
+  temperature = temperature * cooling_rate
+  
+  if (iter %% 1000 == 0) {
+    print(paste("Iteration:", iter, "Best score:", best_score))
+  }
+}
+
+node_summary_counts_temp = node_summary_counts
+node_summary_counts_temp$pop_size = best_solution
+node_summary_counts_temp = node_summary_counts_temp %>%
+  mutate( # Number of samples to take from this node for each category
+    n_for_better = round(better * pop_size),
+    n_for_worse = round(worse * pop_size),
+    n_for_drift = round(drift * pop_size))
+
+all_sum    = sum(node_summary_counts_temp$n_for_better+node_summary_counts_temp$n_for_worse+node_summary_counts_temp$n_for_drift)
+better_rat = sum(node_summary_counts_temp$n_for_better)/all_sum
+worse_rat  = sum(node_summary_counts_temp$n_for_worse)/all_sum
+drift_rat  = sum(node_summary_counts_temp$n_for_drift)/all_sum
+print(100*round(c(better_rat, worse_rat, drift_rat),3))
+
+# -----------------------------------
+# Calculate how many samples each node should contribute to each outcome
+node_allocations = node_summary_counts_temp %>%
+  mutate(
+    # Total samples from this node
+    n_total_samples = n_for_better + n_for_worse + n_for_drift
+  )
+
+print("Sampling plan:")
+print(node_allocations %>% 
+        select(ctree_node, n, better, worse, drift, 
+               n_for_better, n_for_worse, n_for_drift, n_total_samples))
+
+# Verify totals
+cat("\nTotal samples by category:\n")
+cat("Better:", sum(node_allocations$n_for_better),"\n")
+cat("Worse:", sum(node_allocations$n_for_worse),"\n")
+cat("Drift:", sum(node_allocations$n_for_drift),"\n")
+cat("TOTAL:", sum(node_allocations$n_total_samples), "\n")
+
+# Function to get parameter bounds
+get_node_bounds = function(data_with_nodes, node_id, param_names) {
+  node_data = data_with_nodes %>%
+    filter(ctree_node == node_id)
+  
+  if (nrow(node_data) == 0) return(NULL)
+  
+  bounds = node_data %>%
+    select(all_of(param_names)) %>%
+    summarise(across(everything(), list(
+      min = ~quantile(., 0.05, na.rm = TRUE),
+      max = ~quantile(., 0.95, na.rm = TRUE)
+    ))) %>%
+    pivot_longer(everything(), names_to = "param_stat", values_to = "value") %>%
+    separate(param_stat, into = c("parameter", "stat"), sep = "_(?=[^_]+$)") %>%
+    pivot_wider(names_from = stat, values_from = value)
+  
+  return(bounds)
+}
+
+# Function to generate LHS samples
+generate_lhs_samples = function(bounds, n_samples, param_names) {
+  if (is.null(bounds) || n_samples == 0) return(NULL)
+  
+  n_params = length(param_names)
+  lhs_unit = randomLHS(n_samples, n_params)
+  
+  param_samples = as.data.frame(lhs_unit)
+  names(param_samples) = param_names
+  
+  for (param in param_names) {
+    param_min = bounds$min[bounds$parameter == param]
+    param_max = bounds$max[bounds$parameter == param]
+    param_samples[[param]] = param_samples[[param]] * (param_max - param_min) + param_min
+  }
+  
+  return(param_samples)
+}
+
+# Generate samples
+all_samples = list()
+
+cat("\nGenerating samples...\n")
+for (i in 1:nrow(node_allocations)) {
+  node_id = node_allocations$ctree_node[i]
+  n_better = node_allocations$n_for_better[i]
+  n_worse = node_allocations$n_for_worse[i]
+  n_drift = node_allocations$n_for_drift[i]
+  
+  # Get bounds
+  bounds = get_node_bounds(df_clustering, node_id, param_names)
+  if (is.null(bounds)) {
+    cat(sprintf("  Node %d: SKIPPED (no data)\n", node_id))
+    next
+  }
+  
+  # Generate samples for each category from this SAME node
+  # BETTER samples
+  if (n_better > 0) {
+    samples = generate_lhs_samples(bounds, n_better, param_names)
+    if (!is.null(samples)) {
+      samples$target_category = "better"
+      samples$source_node = node_id
+      samples$node_prob_better = node_allocations$better[i]
+      all_samples[[length(all_samples) + 1]] = samples
+    }
+  }
+  
+  # WORSE samples
+  if (n_worse > 0) {
+    samples = generate_lhs_samples(bounds, n_worse, param_names)
+    if (!is.null(samples)) {
+      samples$target_category = "worse"
+      samples$source_node = node_id
+      samples$node_prob_worse = node_allocations$worse[i]
+      all_samples[[length(all_samples) + 1]] = samples
+    }
+  }
+  
+  # DRIFT samples
+  if (n_drift > 0) {
+    samples = generate_lhs_samples(bounds, n_drift, param_names)
+    if (!is.null(samples)) {
+      samples$target_category = "drift"
+      samples$source_node = node_id
+      samples$node_prob_drift = node_allocations$drift[i]
+      all_samples[[length(all_samples) + 1]] = samples
+    }
+  }
+  
+  cat(sprintf("  Node %d: generated %d samples (better:%d, worse:%d, drift:%d)\n",
+              node_id, n_better + n_worse + n_drift, n_better, n_worse, n_drift))
+}
+
+# Combine all samples
+balanced_lhs_dataset = bind_rows(all_samples)
+
+cat("\n=== FINAL RESULTS ===\n")
+cat(sprintf("Total parameter sets: %d\n", nrow(balanced_lhs_dataset)))
+print(table(balanced_lhs_dataset$target_category))
+
+# Shuffle rows
+set.seed(123)
+balanced_lhs_dataset = balanced_lhs_dataset %>%
+  slice_sample(n = nrow(.))
+balanced_lhs_dataset$param_set_id = 0:(dim(balanced_lhs_dataset)[1]-1)
+balanced_lhs_dataset=balanced_lhs_dataset[c('param_set_id',param_names)]
+
+# Export
+write.csv(balanced_lhs_dataset, "balanced_lhs_parameters.csv")
+# balanced_lhs_dataset = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled/loaded_parameters.csv', show_col_types = FALSE)
+
+cat("\nDataset saved to: balanced_lhs_parameters.csv\n")
+
+# Prepare the data for comparison
+original_data = df_clustering %>%
+  select(all_of(param_names)) %>%
+  mutate(source = "Original")
+
+lhs_data = balanced_lhs_dataset %>%
+  select(all_of(param_names)) %>%
+  mutate(source = "LHS Generated")
+
+# Combine
+comparison_data = bind_rows(original_data, lhs_data)
+
+# Pivot to long format for faceting
+comparison_long = comparison_data %>%
+  pivot_longer(cols = all_of(param_names), 
+               names_to = "parameter", 
+               values_to = "value")
+
+# Create the overlaid density plots
+density_plot = ggplot(comparison_long, aes(x = value, fill = source, color = source)) +
+  geom_density(alpha = 0.4, linewidth = 0.8) +
+  facet_wrap(~parameter, scales = "free", ncol = 4) +
+  scale_fill_manual(values = c("Original" = "gray60", "LHS Generated" = "steelblue"),
+                    name = "Dataset") +
+  scale_color_manual(values = c("Original" = "gray30", "LHS Generated" = "darkblue"),
+                     name = "Dataset") +
+  labs(title = "Parameter Distributions: Original vs LHS Generated",
+       subtitle = "Overlaid density plots for all 24 parameters",
+       x = "Parameter Value",
+       y = "Density") +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    strip.text = element_text(size = 8),
+    axis.text = element_text(size = 7)
+  )
+
+print(density_plot)
+
+# Save as high-res image
+ggsave("parameter_distributions_comparison.png", 
+       density_plot, 
+       width = 16, 
+       height = 12, 
+       dpi = 300)

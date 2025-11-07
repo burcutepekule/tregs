@@ -1,4 +1,4 @@
-rm(list=ls())
+# rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -12,14 +12,10 @@ source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0.rds')
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/sampled_parameters.csv', show_col_types = FALSE)
 
-t_max    = 500
-inj_type = 'sterile'
 df_model = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
-df_model = df_model %>% dplyr::mutate(log_integ_diff = sign(integ_diff)*log(1+abs(integ_diff))/(t_max-ss_start))
 df_model = inner_join(df_model, df_params, by='param_set_id')
 
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-ss_start_threshold   = 250
 param_id_all_below = df_model %>%
   dplyr::group_by(param_set_id) %>%
   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
@@ -46,7 +42,7 @@ df_model = df_model %>% dplyr::mutate(effect_size = case_when(
   TRUE ~ "Large"
 ))
 
-df_model$tol = 25*0.25
+df_model$tol = tol_in
 df_summary = df_model %>%
   dplyr::group_by(param_set_id, injury_type, comparison) %>%
   dplyr::summarise(
