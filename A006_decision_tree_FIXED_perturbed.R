@@ -217,12 +217,6 @@ if (!is.null(balanced_drift)) balanced_drift$target_category = "drift"
 # Combine and trim to exact target
 balanced_lhs_dataset = bind_rows(balanced_better, balanced_worse, balanced_drift)
 
-# Trim each category to exact target
-balanced_lhs_dataset = balanced_lhs_dataset %>%
-  group_by(target_category) %>%
-  slice_sample(n = min(target_per_category, n())) %>%
-  ungroup()
-
 # Shuffle
 balanced_lhs_dataset = balanced_lhs_dataset %>%
   slice_sample(n = nrow(.))
@@ -236,6 +230,8 @@ cat("\nProportions:\n")
 print(100 * prop.table(table(balanced_lhs_dataset$target_category)))
 
 # Save WITH target_category
+write.csv(balanced_lhs_dataset, "balanced_lhs_parameters_PERTURBED_with_target_cat.csv", row.names = FALSE)
+# Save WITHOUT target_category
+balanced_lhs_dataset = balanced_lhs_dataset[c('param_set_id',param_names)]
 write.csv(balanced_lhs_dataset, "balanced_lhs_parameters_PERTURBED.csv", row.names = FALSE)
-cat("\nDataset saved to: balanced_lhs_parameters_PERTURBED.csv\n")
-cat("(Note: target_category column is INCLUDED for validation)\n")
+
