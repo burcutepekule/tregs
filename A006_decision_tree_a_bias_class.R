@@ -262,7 +262,8 @@ for (iter in 1:100000) {
   # Generate neighbor solution (modify one or more positions)
   new_solution = current_solution
   positions_to_change = sample(1:length(new_solution), size = sample(1:3, 1))
-  new_solution[positions_to_change] = sample(1:M, size = length(positions_to_change), replace = TRUE)
+  # new_solution[positions_to_change] = sample(1:M, size = length(positions_to_change), replace = TRUE)
+  new_solution[positions_to_change] = sample(0:M, size = length(positions_to_change), replace = TRUE) # allow 0?
   
   new_score = objective_function(new_solution, node_summary_counts)
   
