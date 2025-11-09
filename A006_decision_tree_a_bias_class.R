@@ -50,14 +50,26 @@ df_model = df_model %>% dplyr::mutate(effect_size = case_when(
 ))
 
 df_model$tol = tol_in
+# df_summary = df_model %>%
+#   dplyr::group_by(param_set_id, injury_type, comparison) %>%
+#   dplyr::summarise(
+#     n_better = sum(effect_size %in% c('Large','Medium') & mean_diff > tol, na.rm = TRUE),
+#     n_drift  = sum((mean_diff <= tol & mean_diff >= -1*tol), na.rm = TRUE),
+#     n_worse  = sum(effect_size %in% c('Large','Medium') & mean_diff < -1*tol, na.rm = TRUE),
+#     .groups = "drop"
+#   )
 df_summary = df_model %>%
   dplyr::group_by(param_set_id, injury_type, comparison) %>%
   dplyr::summarise(
     n_better = sum(effect_size %in% c('Large','Medium') & mean_diff > tol, na.rm = TRUE),
-    n_drift  = sum((mean_diff <= tol & mean_diff >= -1*tol), na.rm = TRUE),
     n_worse  = sum(effect_size %in% c('Large','Medium') & mean_diff < -1*tol, na.rm = TRUE),
+    n_total  = dplyr::n(),
     .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    n_drift = n_total - n_better - n_worse
   )
+
 
 df_summary = inner_join(df_summary %>% dplyr::select(param_set_id, n_better, n_drift, n_worse), df_model, by='param_set_id')
 
