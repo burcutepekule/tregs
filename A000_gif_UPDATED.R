@@ -14,10 +14,11 @@ args = commandArgs(trailingOnly = TRUE)
 
 # Default values
 param_row = 1        # Which row from CSV to use (1-indexed, excluding header)
-seed_in = 3          # Random seed
+seed_in = 3          # Random seed (now used as stream selector)
 sterile = 0          # 0 = infection, 1 = sterile injury
 allow_tregs = 1      # Allow tregs to do their job
 randomize_tregs = 0  # 0 = follow DAMPs, 1 = random movement
+use_synchronized_rng = TRUE  # Use synchronized random numbers for fair comparisons
 
 # Parse command line arguments
 if (length(args) > 0) param_row = as.numeric(args[1])
@@ -25,6 +26,7 @@ if (length(args) > 1) seed_in = as.numeric(args[2])
 if (length(args) > 2) sterile = as.numeric(args[3])
 if (length(args) > 3) allow_tregs = as.numeric(args[4])
 if (length(args) > 4) randomize_tregs = as.numeric(args[5])
+if (length(args) > 5) use_synchronized_rng = as.logical(args[6])
 
 cat(sprintf("Using parameter set: %d, seed: %d, sterile: %d, allow_tregs: %d, randomize_tregs: %d\n",
             param_row, seed_in, sterile, allow_tregs, randomize_tregs))
@@ -47,7 +49,83 @@ source("./MISC/PLOT_FUNCTIONS.R")
 dir_name = './frames'
 dir.create(dir_name, showWarnings = FALSE)
 
-set.seed(seed_in)
+# ============================================================================
+# SYNCHRONIZED RANDOM NUMBER GENERATOR
+# For fair scenario comparisons (Tregs ON vs OFF with identical randomness)
+# ============================================================================
+if (use_synchronized_rng) {
+  random_stream_file <- "random_numbers_seed_42.txt"
+
+  if (!file.exists(random_stream_file)) {
+    cat("\n*** WARNING: Synchronized random stream not found! ***\n")
+    cat("Run: Rscript generate_random_stream.R\n")
+    cat("Falling back to standard RNG with set.seed()\n\n")
+    set.seed(seed_in)
+  } else {
+    cat(sprintf("Loading synchronized random stream from: %s\n", random_stream_file))
+
+    # Create environment to store RNG state
+    rng_env <- new.env()
+    rng_env$stream <- scan(random_stream_file, quiet = TRUE)
+    rng_env$index <- 1
+
+    cat(sprintf("  Stream length: %d random numbers\n", length(rng_env$stream)))
+
+    # Custom uniform sampler
+    my_runif <- function(n = 1) {
+      if (is.null(rng_env$index)) rng_env$index <- 1
+
+      if (rng_env$index + n - 1 > length(rng_env$stream)) {
+        stop(sprintf("Random stream exhausted! Used %d numbers, need %d more.",
+                     rng_env$index - 1, n))
+      }
+
+      vals <- rng_env$stream[rng_env$index:(rng_env$index + n - 1)]
+      rng_env$index <- rng_env$index + n
+      vals
+    }
+
+    # Custom sample function
+    my_sample <- function(x, size, replace = FALSE, prob = NULL) {
+      n <- length(x)
+      if (!replace && size > n)
+        stop("cannot take a sample larger than the population")
+
+      probs <- if (is.null(prob)) rep(1/n, n) else prob / sum(prob)
+      u <- my_runif(size)
+      cumprob <- cumsum(probs)
+      indices <- findInterval(u, cumprob) + 1
+      x[indices]
+    }
+
+    # Custom beta sampler
+    my_rbeta <- function(n, shape1, shape2) {
+      u1 <- my_runif(n)
+      u2 <- my_runif(n)
+      qbeta(u1, shape1, shape2)
+    }
+
+    # Custom gamma sampler
+    my_rgamma <- function(n, shape, rate = 1) {
+      u <- my_runif(n)
+      qgamma(u, shape = shape, rate = rate)
+    }
+
+    # Override base R functions
+    runif <- my_runif
+    sample <- my_sample
+    rbeta <- my_rbeta
+    rgamma <- my_rgamma
+
+    cat(sprintf("  Using synchronized RNG (stream starting at index 1)\n"))
+    cat("  NOTE: For fair comparisons, use SAME seed_in for Tregs ON/OFF\n\n")
+  }
+} else {
+  # Standard R RNG
+  set.seed(seed_in)
+  cat(sprintf("Using standard RNG with seed: %d\n", seed_in))
+}
+
 placeholder = nullGrob()
 
 # ============================================================================
@@ -631,46 +709,48 @@ for (t in 1:t_max) {
 
   # ========================================================================
   # TREG ACTIVATION & EFFECTOR ACTIONS (UPDATED: Beta distribution sampling)
+  # CRITICAL: Always consume random numbers to maintain stream synchronization!
   # ========================================================================
-  if (allow_tregs_to_do_their_job) {
-    M1_phagocyte_indices = which(phagocyte_phenotype == 1)
+  M1_phagocyte_indices = which(phagocyte_phenotype == 1)
 
-    if (length(M1_phagocyte_indices) > 0) {
-      for (i in M1_phagocyte_indices) {
-        px = phagocyte_x[i]
-        py = phagocyte_y[i]
+  if (length(M1_phagocyte_indices) > 0) {
+    for (i in M1_phagocyte_indices) {
+      px = phagocyte_x[i]
+      py = phagocyte_y[i]
 
-        treg_distances_x = abs(treg_x - px)
-        treg_distances_y = abs(treg_y - py)
-        nearby_treg_indices = which(treg_distances_x <= treg_vicinity_effect &
-                                      treg_distances_y <= treg_vicinity_effect)
+      treg_distances_x = abs(treg_x - px)
+      treg_distances_y = abs(treg_y - py)
+      nearby_treg_indices = which(treg_distances_x <= treg_vicinity_effect &
+                                    treg_distances_y <= treg_vicinity_effect)
 
-        if (length(nearby_treg_indices) > 0) {
-          num_pat_antigens = phagocyte_pathogens_engulfed[i]
-          num_com_antigens = phagocyte_commensals_engulfed[i]
+      if (length(nearby_treg_indices) > 0) {
+        num_pat_antigens = phagocyte_pathogens_engulfed[i]
+        num_com_antigens = phagocyte_commensals_engulfed[i]
 
-          if ((num_pat_antigens + num_com_antigens) > 0) {
-            # UPDATED: Stochastic Beta-distributed perception
-            rat_com_pat_real = num_com_antigens / (num_com_antigens + num_pat_antigens)
-            alpha = (1 - treg_discrimination_efficiency) * 1 +
-              treg_discrimination_efficiency * (rat_com_pat_real * precision)
-            beta = (1 - treg_discrimination_efficiency) * 1 +
-              treg_discrimination_efficiency * ((1 - rat_com_pat_real) * precision)
-            rat_com_pat = sample_rbeta(alpha, beta)
+        if ((num_pat_antigens + num_com_antigens) > 0) {
+          # ALWAYS calculate and sample (to maintain stream synchronization)
+          rat_com_pat_real = num_com_antigens / (num_com_antigens + num_pat_antigens)
+          alpha = (1 - treg_discrimination_efficiency) * 1 +
+            treg_discrimination_efficiency * (rat_com_pat_real * precision)
+          beta = (1 - treg_discrimination_efficiency) * 1 +
+            treg_discrimination_efficiency * ((1 - rat_com_pat_real) * precision)
 
-            if (rat_com_pat > rat_com_pat_threshold) {
-              treg_phenotype[nearby_treg_indices] = 1
-              treg_activity_SAMPs_binary[nearby_treg_indices] = 1
-              treg_active_age[nearby_treg_indices] = 1
+          # ALWAYS consume from random stream (both Tregs ON and OFF)
+          rat_com_pat = sample_rbeta(alpha, beta)
 
-              if (allow_tregs_to_suppress_cognate) {
-                phagocyte_phenotype[i] = 2
-                phagocyte_active_age[i] = 1
-                bacteria_count = sum(phagocyte_bacteria_registry[i, ])
-                phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
-                phagocyte_activity_engulf[i] = activity_engulf_M2_baseline +
-                  activity_engulf_M2_step * bacteria_count
-              }
+          # But ONLY apply the effect if Tregs are allowed to work
+          if (allow_tregs_to_do_their_job && rat_com_pat > rat_com_pat_threshold) {
+            treg_phenotype[nearby_treg_indices] = 1
+            treg_activity_SAMPs_binary[nearby_treg_indices] = 1
+            treg_active_age[nearby_treg_indices] = 1
+
+            if (allow_tregs_to_suppress_cognate) {
+              phagocyte_phenotype[i] = 2
+              phagocyte_active_age[i] = 1
+              bacteria_count = sum(phagocyte_bacteria_registry[i, ])
+              phagocyte_activity_ROS[i] = activity_ROS_M2_baseline
+              phagocyte_activity_engulf[i] = activity_engulf_M2_baseline +
+                activity_engulf_M2_step * bacteria_count
             }
           }
         }
