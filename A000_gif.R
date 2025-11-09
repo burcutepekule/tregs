@@ -13,21 +13,21 @@ library(av)
 # args = commandArgs(trailingOnly = TRUE)
 # 
 # # Default values
-# param_row = 1        # Which row from CSV to use (1-indexed, excluding header)
+# param_set_id_use = 1        # Which row from CSV to use (1-indexed, excluding header)
 # seed_in = 3          # Random seed
 # sterile = 0          # 0 = infection, 1 = sterile injury
 # allow_tregs = 1      # Allow tregs to do their job
 # randomize_tregs = 0  # 0 = follow DAMPs, 1 = random movement
 # 
 # # Parse command line arguments
-# if (length(args) > 0) param_row = as.numeric(args[1])
+# if (length(args) > 0) param_set_id_use = as.numeric(args[1])
 # if (length(args) > 1) seed_in = as.numeric(args[2])
 # if (length(args) > 2) sterile = as.numeric(args[3])
 # if (length(args) > 3) allow_tregs = as.numeric(args[4])
 # if (length(args) > 4) randomize_tregs = as.numeric(args[5])
 # 
 # cat(sprintf("Using parameter set: %d, seed: %d, sterile: %d, allow_tregs: %d, randomize_tregs: %d\n",
-#             param_row, seed_in, sterile, allow_tregs, randomize_tregs))
+#             param_set_id_use, seed_in, sterile, allow_tregs, randomize_tregs))
 # 
 # # ============================================================================
 # # SETUP DIRECTORIES AND SOURCES
@@ -42,11 +42,11 @@ library(av)
 # setwd(script_dir)
 
 # Default values
-param_row = 1        # Which row from CSV to use (1-indexed, excluding header)
-seed_in = 3          # Random seed
-sterile = 0          # 0 = infection, 1 = sterile injury
-allow_tregs = 1      # Allow tregs to do their job
-randomize_tregs = 0  # 0 = follow DAMPs, 1 = random movement
+param_set_id_use = 123        # Which row from CSV to use (1-indexed, excluding header)
+seed_in          = 1          # Random seed
+sterile          = 1         # 0 = infection, 1 = sterile injury
+allow_tregs      = 1      # Allow tregs to do their job
+randomize_tregs  = 0  # 0 = follow DAMPs, 1 = random movement
 
 source("./MISC/FAST_FUNCTIONS.R")
 source("./MISC/PLOT_FUNCTIONS.R")
@@ -61,70 +61,65 @@ placeholder = nullGrob()
 # READ PARAMETERS FROM CSV
 # ============================================================================
 params_df = read.csv("balanced_lhs_parameters.csv", stringsAsFactors = FALSE)
-
-if (param_row > nrow(params_df)) {
-  stop(sprintf("Parameter row %d exceeds available rows (%d)", param_row, nrow(params_df)))
-}
-
 # Extract parameters for this row
-p = params_df[param_row, ]
+param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
 
 cat("Loaded parameters:\n")
-print(p)
+print(param_set_use)
 
 # ============================================================================
 # ASSIGN PARAMETERS FROM CSV
 # ============================================================================
 # Thresholds
-th_ROS_microbe = p$th_ROS_microbe
-th_ROS_epith_recover = p$th_ROS_epith_recover
-epith_recovery_chance = p$epith_recovery_chance
-rat_com_pat_threshold = p$rat_com_pat_threshold
+th_ROS_microbe = param_set_use$th_ROS_microbe
+th_ROS_epith_recover = param_set_use$th_ROS_epith_recover
+epith_recovery_chance = param_set_use$epith_recovery_chance
+rat_com_pat_threshold = param_set_use$rat_com_pat_threshold
 
 # Diffusion speeds
-diffusion_speed_DAMPs = p$diffusion_speed_DAMPs
-diffusion_speed_SAMPs = p$diffusion_speed_SAMPs
-diffusion_speed_ROS = p$diffusion_speed_ROS
+diffusion_speed_DAMPs = param_set_use$diffusion_speed_DAMPs
+diffusion_speed_SAMPs = param_set_use$diffusion_speed_SAMPs
+diffusion_speed_ROS = param_set_use$diffusion_speed_ROS
 
 # Signal production
-add_ROS = p$add_ROS
-add_DAMPs = p$add_DAMPs
-add_SAMPs = p$add_SAMPs
+add_ROS = param_set_use$add_ROS
+add_DAMPs = param_set_use$add_DAMPs
+add_SAMPs = param_set_use$add_SAMPs
 
 # Decay rates
-ros_decay = p$ros_decay
-DAMPs_decay = p$DAMPs_decay
-SAMPs_decay = p$SAMPs_decay
+ros_decay = param_set_use$ros_decay
+DAMPs_decay = param_set_use$DAMPs_decay
+SAMPs_decay = param_set_use$SAMPs_decay
 
 # Activation thresholds
-activation_threshold_DAMPs = p$activation_threshold_DAMPs
-activation_threshold_SAMPs = p$activation_threshold_SAMPs
+activation_threshold_DAMPs = param_set_use$activation_threshold_DAMPs
+activation_threshold_SAMPs = param_set_use$activation_threshold_SAMPs
 
 # Engulfment activities
-activity_engulf_M0_baseline = p$activity_engulf_M0_baseline
-activity_engulf_M1_baseline = p$activity_engulf_M1_baseline
-activity_engulf_M2_baseline = p$activity_engulf_M2_baseline
+activity_engulf_M0_baseline = param_set_use$activity_engulf_M0_baseline
+activity_engulf_M1_baseline = param_set_use$activity_engulf_M1_baseline
+activity_engulf_M2_baseline = param_set_use$activity_engulf_M2_baseline
 activity_engulf_max = 0.99
 
 # ROS production activities
 activity_ROS_M0_baseline = 0.00
-activity_ROS_M1_baseline = p$activity_ROS_M1_baseline
+activity_ROS_M1_baseline = param_set_use$activity_ROS_M1_baseline
 activity_ROS_M2_baseline = 0.00
 activity_ROS_max = 0.99
 
 # Leak rates
-rate_leak_commensal_injury = p$rate_leak_commensal_injury
-rate_leak_pathogen_injury = ifelse(sterile == 1, 0.0, p$rate_leak_pathogen_injury)
-rate_leak_commensal_baseline = p$rate_leak_commensal_baseline
+rate_leak_commensal_injury = param_set_use$rate_leak_commensal_injury
+rate_leak_pathogen_injury = ifelse(sterile == 1, 0.0, param_set_use$rate_leak_pathogen_injury)
+rate_leak_commensal_baseline = param_set_use$rate_leak_commensal_baseline
 
 # Phagocyte parameters
-active_age_limit = as.integer(p$active_age_limit)
+active_age_limit = as.integer(param_set_use$active_age_limit)
 cc_phagocyte = 5
 digestion_time = 1
 
 # Treg parameters
 treg_vicinity_effect = 1
-treg_discrimination_efficiency = p$treg_discrimination_efficiency
+treg_discrimination_efficiency = param_set_use$treg_discrimination_efficiency
 allow_tregs_to_do_their_job = allow_tregs
 allow_tregs_to_suppress_cognate = FALSE
 
@@ -485,7 +480,7 @@ for (t in 1:t_max) {
     p = plot_simtime_simple()
     ggsave(
       paste0(dir_name, "/frame_seed_", seed_in, "_STERILE_", sterile, "_TREGS_",
-             allow_tregs, "_trnd_", randomize_tregs, "_paramset_", param_row, "_", t, ".png"),
+             allow_tregs, "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, "_", t, ".png"),
       plot = p,
       width = 12,
       height = 10,
@@ -788,7 +783,7 @@ longitudinal_df$sterile = sterile
 longitudinal_df$allow_tregs_to_do_their_job = allow_tregs
 longitudinal_df$allow_tregs_to_suppress_cognate = allow_tregs_to_suppress_cognate
 longitudinal_df$randomize_tregs = randomize_tregs
-longitudinal_df$param_set_id = p$param_set_id
+longitudinal_df$param_set_id = param_set_use$param_set_id
 
 longitudinal_df = longitudinal_df %>%
   select(t, sterile, allow_tregs_to_do_their_job, allow_tregs_to_suppress_cognate,
@@ -798,12 +793,12 @@ longitudinal_df = longitudinal_df %>%
 # CREATE VIDEO
 # ============================================================================
 pattern = paste0("^frame_seed_\\d+_STERILE_", sterile, "_TREGS_", allow_tregs,
-                 "_trnd_", randomize_tregs, "_paramset_", param_row, "_\\d+\\.png$")
+                 "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, "_\\d+\\.png$")
 
 png_files = list.files(dir_name, full.names = TRUE, pattern = pattern)
 png_files = png_files[order(as.numeric(gsub(".*_(\\d+)\\.png$", "\\1", png_files)))]
 video_out = paste0(dir_name, "/simulation_sterile", sterile, "_tregs_", allow_tregs,
-                   "_trnd_", randomize_tregs, "_paramset_", param_row, ".mp4")
+                   "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, ".mp4")
 
 if (length(png_files) > 0) {
   av_encode_video(
@@ -819,6 +814,6 @@ if (length(png_files) > 0) {
 }
 
 cat("\nSimulation complete!\n")
-cat(sprintf("Parameter set: %d\n", param_row))
+cat(sprintf("Parameter set: %d\n", param_set_id_use))
 cat(sprintf("Final pathogen count: %d\n", nrow(pathogen_coords)))
 cat(sprintf("Final commensal count: %d\n", nrow(commensal_coords)))

@@ -59,3 +59,4 @@ round(100*sum(x<=tol_in & x>=(-1*tol_in))/length(x),2)
 round(100*sum(x<(-1*tol_in))/length(x),2)
 hist(x,30)
 
+df_raw_neg = df_raw %>% dplyr::filter(mean_diff < -100)

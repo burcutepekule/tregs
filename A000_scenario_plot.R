@@ -3,16 +3,16 @@ library(dplyr)
 library(tidyr)
 library(readr)
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
-scenarios      = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/scenarios.csv', show_col_types = FALSE)
+scenarios      = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled/scenarios.csv', show_col_types = FALSE)
 
 # Load all files
-params           = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results/sampled_parameters.csv', show_col_types = FALSE)
+params           = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled/loaded_parameters.csv', show_col_types = FALSE)
 
 
-param_id     = 228
-rep_ind      = 0
+param_id     = 109 #6, 7
+rep_ind      = 6
 
-results      = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results/simulation_results_param_set_',param_id,'.csv'), show_col_types = FALSE)
+results      = read_csv(paste0('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled/simulation_results_param_set_',param_id,'.csv'), show_col_types = FALSE)
 results_plot = results %>% left_join(params, by = 'param_set_id') 
 
 colnames(results_plot)[3] = 'tregs_on'
