@@ -88,7 +88,7 @@ if(start_id<max_index){
     
     full_data_comparison = results %>% dplyr::select(scenario_id, param_set_id, replicate_id, t, epithelial_score)
     
-    for (rep in 0:9){
+    for (rep in 0:99){ # PAY ATTENTION TO THIS!
       
       #### PATHOGENIC INJURY
       # tregs OFF

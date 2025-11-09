@@ -13,20 +13,24 @@ ss_start_threshold   = 450
 t_max                = 500
 tol_in               = 25*0.25
 
-df_raw = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre.rds')
-df_params_pre = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled/loaded_parameters.csv', show_col_types = FALSE)
+df_raw = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre_123.rds')
+df_params_pre = read_csv('/Users/burcutepekule/Desktop/tregs/mass_sim_results_presampled_123/loaded_parameters.csv', show_col_types = FALSE)
 
 df_raw_keep = df_raw
 df_raw = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
-hist(df_raw_keep$mean_diff)
+hist(df_raw$mean_diff,30)
+plot(df_raw$ss_start, df_raw$mean_diff)
 
-# #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
+
+#----- filter based on ss_start, it cannot be too large otherwise not much to compare!
 # param_id_all_below = df_raw %>%
 #   dplyr::group_by(param_set_id) %>%
 #   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
 #   dplyr::filter(all_below) %>%
 #   dplyr::pull(param_set_id)
 # df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
+
+
 
 #----- filter based on replicate_id, less than 10 means incomplete!
 # param_id_all_complete = df_raw %>%
