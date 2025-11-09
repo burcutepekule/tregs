@@ -65,8 +65,8 @@ t_max_ind = 500 # max 500 time points
 # Initialize an empty results dataframe before the loop
 all_comparison_results = data.frame()
 
-if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_pre.rds')){
-  start_id = 1+readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_pre.rds')
+if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_per.rds')){
+  start_id = 1+readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_per.rds')
 }else{
   start_id = 0
 }
@@ -181,15 +181,15 @@ if(start_id<max_index){
   }
   message("Last param_id successfully added: ", max(all_comparison_results$param_set_id))
   
-  saveRDS(max(all_comparison_results$param_set_id), '/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_pre.rds') 
+  saveRDS(max(all_comparison_results$param_set_id), '/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_per.rds') 
   
   #---- read previous file
-  if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre.rds')){
-    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre.rds')
+  if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_per.rds')){
+    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_per.rds')
   }else{
-    all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre.rds')
+    all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_per.rds')
     all_comparison_results = rbind(all_comparison_results_old, all_comparison_results)
-    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_pre.rds')
+    saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_0_per.rds')
   }
 }else{
   message("No new pts added.")
