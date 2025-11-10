@@ -75,12 +75,12 @@ agent_colors = c(
 
 plot_faceted = function(data, variables, title) {
   data_long = data %>%
-    dplyr::select(t, sterile, allow_tregs_to_do_their_job, all_of(variables)) %>%
+    dplyr::select(t, sterile, allow_tregs, all_of(variables)) %>%
     pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
   
   p=ggplot(data_long, aes(x = t, y = value, color = variable)) +
     geom_line(alpha = 1, linewidth = 1) +
-    facet_grid(sterile ~ allow_tregs_to_do_their_job, labeller = label_both) +
+    facet_grid(sterile ~ allow_tregs, labeller = label_both) +
     scale_color_manual(values = agent_colors) +
     theme_minimal() +
     labs(title = title, x = "Time", y = "Count", color = "Agent")
@@ -90,19 +90,19 @@ plot_faceted = function(data, variables, title) {
 
 plot_faceted_stationary = function(data, variables, title) {
   data_long = data %>%
-    dplyr::select(t, sterile, allow_tregs_to_do_their_job, first_stable_t, all_of(variables)) %>%
+    dplyr::select(t, sterile, allow_tregs, first_stable_t, all_of(variables)) %>%
     pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
   
   # Summarize the vertical line position per facet
   vline_data = data_long %>%
-    distinct(sterile, allow_tregs_to_do_their_job, first_stable_t)
+    distinct(sterile, allow_tregs, first_stable_t)
   
   p=ggplot(data_long, aes(x = t, y = value, color = variable)) +
     geom_line(alpha = 1, linewidth = 1) +
     geom_vline(data = vline_data, 
                aes(xintercept = first_stable_t), 
                linetype = "dashed", color = "black") +
-    facet_grid(sterile ~ allow_tregs_to_do_their_job, labeller = label_both) +
+    facet_grid(sterile ~ allow_tregs, labeller = label_both) +
     scale_color_manual(values = agent_colors) +
     theme_minimal() +
     labs(title = title, x = "Time", y = "Count", color = "Agent")
@@ -113,13 +113,13 @@ plot_faceted_stationary = function(data, variables, title) {
 
 plot_faceted_8 = function(data, variables, title) {
   data_long = data %>%
-    dplyr::select(t, sterile, allow_tregs_to_do_their_job, randomize_tregs, all_of(variables)) %>%
+    dplyr::select(t, sterile, allow_tregs, randomize_tregs, all_of(variables)) %>%
     pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
   
   p = ggplot(data_long, aes(x = t, y = value, color = variable)) +
     geom_line(alpha = 1, linewidth = 1) +
-    # facet_grid(sterile ~ allow_tregs_to_do_their_job + randomize_tregs, labeller = label_both) +
-    facet_grid(randomize_tregs ~ allow_tregs_to_do_their_job + sterile, labeller = label_both) +
+    # facet_grid(sterile ~ allow_tregs + randomize_tregs, labeller = label_both) +
+    facet_grid(randomize_tregs ~ allow_tregs + sterile, labeller = label_both) +
     scale_color_manual(values = agent_colors) +
     theme_minimal() +
     labs(title = title, x = "Time", y = "Count", color = "Agent")
@@ -762,7 +762,7 @@ plot_simtime_simple = function(){
     injury_type= 'sterile'
   }
   
-  tit_add = paste0('Sim. time : ',t,', Injury: ',injury_type,', Tregs allowed : ',allow_tregs_to_do_their_job)
+  tit_add = paste0('Sim. time : ',t,', Injury: ',injury_type,', Tregs allowed : ',allow_tregs)
   row_0 = plot_grid(p_mic_bar,p_lym_bar,p_treg_bar, p_cumdeath, ncol = 4, rel_widths =  c(1,1,1,1))
   row_1 = plot_grid(p_com,p_pat,p_a,p_d,ncol = 4, rel_widths =  c(1,1,1.1,1.05))
   row_2 = plot_grid(p_DAMPs,p_SAMPs,p_ROS,p_lymp,ncol = 4, rel_widths =  c(1,1,0.98,1.1))

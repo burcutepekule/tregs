@@ -100,3 +100,11 @@ get_middle_percent <- function(seq_vector, percent) {
   
   return(seq_vector[start_idx:end_idx])
 }
+
+sample_rbeta <- function(alpha, beta) {
+  x <- rgamma(1, shape = alpha, rate = 1.0)
+  y <- rgamma(1, shape = beta, rate = 1.0)
+  return(x / (x + y))
+}
+
+
