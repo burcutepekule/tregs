@@ -816,7 +816,10 @@ for(param_set_id_use in 0:9999){
     longitudinal_df_keep = rbind(longitudinal_df_keep, longitudinal_df)
   }
   colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
-  saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,'_tregs_',allow_tregs,'.rds'))
+  saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
+                                       '_sterile_',sterile,
+                                       '_trnd_',randomize_tregs,
+                                       '_tregs_',allow_tregs,'.rds'))
   print(paste0('Data for param set id ',param_set_id_use,' saved 🥳.'))
 }
 

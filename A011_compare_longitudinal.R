@@ -28,7 +28,8 @@ for(param_set_id in 11:100){
     labs(title = "Epithelial Cell Dynamics", x = "Time", y = "Count", color = "Agent")
   print(p)
   
-  print(sum(df_treg_0_keep$epithelial_healthy-df_treg_1_keep$epithelial_healthy))
+  # print(sum(df_treg_0_keep$epithelial_healthy-df_treg_1_keep$epithelial_healthy))
+  print(sum(df_treg_1_keep$epithelial_healthy-df_treg_0_keep$epithelial_healthy))
   browser()
   
   # for(rep_id in 0:9){
