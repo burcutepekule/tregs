@@ -20,13 +20,13 @@ df_raw_keep = df_raw
 df_raw = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
 hist(df_raw_keep$mean_diff)
 
-# #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
-# param_id_all_below = df_raw %>%
-#   dplyr::group_by(param_set_id) %>%
-#   dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
-#   dplyr::filter(all_below) %>%
-#   dplyr::pull(param_set_id)
-# df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
+#----- filter based on ss_start, it cannot be too large otherwise not much to compare!
+param_id_all_below = df_raw %>%
+  dplyr::group_by(param_set_id) %>%
+  dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
+  dplyr::filter(all_below) %>%
+  dplyr::pull(param_set_id)
+df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
 
 #----- filter based on replicate_id, less than 10 means incomplete!
 # param_id_all_complete = df_raw %>%
