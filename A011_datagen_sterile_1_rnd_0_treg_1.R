@@ -1,12 +1,21 @@
 rm(list=ls())
-
 library(dplyr)
 library(tidyr)
-library(cowplot)
-library(ggplot2)
-library(gridExtra)
-library(grid)
-library(av)
+# library(cowplot)
+# library(ggplot2)
+# library(gridExtra)
+# library(grid)
+# library(av)
+
+split_equal = function(x, n_chunks) {
+  split(x, cut(seq_along(x), breaks = n_chunks, labels = FALSE))
+}
+args = commandArgs(trailingOnly = TRUE)
+n1   = as.integer(args[1])
+n2   = as.integer(args[2])
+
+chunks    = split_equal(0:9999, n1)
+loop_over = chunks[[n2]]
 
 dir_name = './frames'
 dir.create(dir_name, showWarnings = FALSE)
@@ -14,8 +23,8 @@ dir.create(dir_name, showWarnings = FALSE)
 dir_name_data = './mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
 
-random_stream_file = paste0("./random_streams/random_numbers_seed_0.csv")
-stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
+# random_stream_file = paste0("./random_streams/random_numbers_seed_0.csv")
+# stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 
 # Default values
 sterile              = 1   # 0 = infection, 1 = sterile injury
@@ -36,7 +45,7 @@ params_df = read.csv("./original_lhs_parameters.csv", stringsAsFactors = FALSE)
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
-t_max      = 500
+t_max      = 5000
 plot_on    = 0
 plot_every = Inf
 grid_size  = 25
@@ -63,12 +72,16 @@ act_radius_SAMPs = 1
 # Logistic function parameters (for epithelial injury calculation)
 k_in = 0.044
 x0_in = 50
-shift_by = 100
+shift_by = 10
 
-for(param_set_id_use in 0:9999){
+# for(param_set_id_use in 0:9999){
+for(param_set_id_use in loop_over){
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
   longitudinal_df_keep = c()
-  print(paste0('Processing param set ',param_set_id_use,' 😱...'))
+  print(paste0('Processing param set ',param_set_id_use,' 😱'))
+  
+  random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
+  stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
   
   for (reps_in in 0:9){
     rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in",
@@ -80,7 +93,8 @@ for(param_set_id_use in 0:9999){
                              "n_commensals_lp","injury_percentage","max_level_injury",
                              "max_cell_value_ROS","max_cell_value_DAMPs","max_cell_value_SAMPs",
                              "lim_ROS","lim_DAMP","lim_SAMP","act_radius_ROS","act_radius_treg",
-                             "act_radius_DAMPs","act_radius_SAMPs","k_in","x0_in","shift_by")))
+                             "act_radius_DAMPs","act_radius_SAMPs","k_in","x0_in","shift_by",
+                             "random_stream_file","stream_in")))
     
     # ============================================================================
     # LOAD FUNCTIONS
@@ -93,8 +107,11 @@ for(param_set_id_use in 0:9999){
     # DEAL WITH RNG
     # ============================================================================
     
-    # shift for every rep, can't afford to have so many rnd generators
-    stream_in_use = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+    # # shift for every rep, can't afford to have so many rnd generators
+    stream_in_use      = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+    
+    # # shift for every rep, can't afford to have so many rnd generators
+    # stream_in_use = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
     
     rng_env        = new.env()
     rng_env$stream = stream_in_use
@@ -249,24 +266,24 @@ for(param_set_id_use in 0:9999){
     
     # Initialize pathogens
     if (n_pathogens_lp == 0) {
-      pathogen_coords <- matrix(numeric(0), ncol = 3)
-      colnames(pathogen_coords) <- c("x", "y", "id")
+      pathogen_coords = matrix(numeric(0), ncol = 3)
+      colnames(pathogen_coords) = c("x", "y", "id")
     } else {
-      pathogen_coords <- matrix(c(
+      pathogen_coords = matrix(c(
         sample(injury_site, n_pathogens_lp, TRUE),
         rep(1, n_pathogens_lp),
         seq(1, n_pathogens_lp)
       ), ncol = 3)
-      colnames(pathogen_coords) <- c("x", "y", "id")
+      colnames(pathogen_coords) = c("x", "y", "id")
     }
     
     # Initialize commensals
-    commensal_coords <- matrix(c(
+    commensal_coords = matrix(c(
       sample(1:grid_size, n_commensals_lp, TRUE),
       sample(1:grid_size, n_commensals_lp, TRUE),
       seq(1, n_commensals_lp)
     ), ncol = 3)
-    colnames(commensal_coords) <- c("x", "y", "id")
+    colnames(commensal_coords) = c("x", "y", "id")
     
     last_id_pathogen = n_pathogens_lp
     last_id_commensal = n_commensals_lp

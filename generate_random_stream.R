@@ -9,7 +9,7 @@ library(readr)
 total_draws_needed = 1e7
 
 # Generate random numbers using R's RNG
-for (int_in in 0){
+for (int_in in 0:9999){
   set.seed(int_in)  # For reproducibility of the stream itself
   random_stream = runif(total_draws_needed)
   

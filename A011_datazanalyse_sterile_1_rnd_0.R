@@ -13,7 +13,7 @@ ss_start_threshold   = 450
 t_max                = 500
 tol_in               = 25*0.25
 
-df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
+df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0_old.rds')
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
 df_raw_keep = df_raw
@@ -61,7 +61,106 @@ round(100*sum(x<=tol_in & x>=(-1*tol_in))/length(x),2)
 round(100*sum(x<(-1*tol_in))/length(x),2)
 hist(x,30)
 
-df_raw_plot_nz_neg = df_raw_plot_nz %>% dplyr::filter(mean_diff < 0)
+#-----------
+var_df = df_raw %>%
+  group_by(param_set_id) %>%
+  summarise(
+    variance = var(mean_diff),
+    sd = sd(mean_diff),
+    mean = mean(mean_diff),
+    min = min(mean_diff),
+    max = max(mean_diff),
+    n_replicates = n()
+  ) %>%
+  arrange(desc(variance))
 
-df_raw_plot_inv = df_raw %>% dplyr::filter(param_set_id==95)
+
+df_raw = df_raw %>% inner_join(var_df, by='param_set_id')
+df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd>1,1,0))
+df_raw_use = distinct(df_raw[c('param_set_id','sd','mean','min','max','high_var')])
+df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
+
+# Filter for the two groups
+df_plot = df_raw_use %>%
+  filter(high_var %in% c(0, 1)) %>%
+  mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
+
+ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = log10(SAMPs_decay/DAMPs_decay), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+# Low treg_discrimination_efficiency - Tregs can't distinguish commensals
+# This is actually more sophisticed and gives a bimodal dist. probably because 
+# too low leads to bad outcomes consistently, 
+# and too high leads to good outcomes consistently?
+
+ggplot(df_plot, aes(x = treg_discrimination_efficiency, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+df_plot_low = df_plot %>% dplyr::filter(high_var=='Low Variance')
+hist(df_plot_low$treg_discrimination_efficiency)
+plot(df_plot_low$treg_discrimination_efficiency, df_plot_low$mean)
+
+ggplot(df_plot, aes(x = (diffusion_speed_DAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (activation_threshold_SAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (SAMPs_decay), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (activation_threshold_DAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (activation_threshold_DAMPs-activation_threshold_SAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (DAMPs_decay-SAMPs_decay), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (diffusion_speed_DAMPs-diffusion_speed_SAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = (diffusion_speed_SAMPs), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = activation_threshold_DAMPs-(add_DAMPs/DAMPs_decay), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = activation_threshold_DAMPs-(add_DAMPs-diffusion_speed_DAMPs-DAMPs_decay), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+### epith_recovery_chance (line 769): If too low, injury never heals, commensal leakage persists
+ggplot(df_plot, aes(x = (epith_recovery_chance), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
 

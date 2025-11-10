@@ -119,216 +119,219 @@ for(allow_tregs in allow_tregs_vec){
   }
 }
 
-# colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
-# 
-# 
-# # saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
-# #                                      '_sterile_',sterile,
-# #                                      '_trnd_',randomize_tregs,
-# #                                      '_tregs_',allow_tregs,'.rds'))
-# # print(paste0('Data for param set id ',param_set_id_use,' saved 🥳.'))
-# longitudinal_df_500  = longitudinal_df_keep %>% dplyr::filter(t<=500)
-# longitudinal_df_1500 = longitudinal_df_keep %>% dplyr::filter(t<=1500)
-# longitudinal_df_5000 = longitudinal_df_keep 
-# 
-# df_treg   = longitudinal_df_5000 %>% dplyr::filter(rep_id==9)
-# variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
-# data_long = df_treg %>%
-#   dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%
-#   pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
-# 
-# p=ggplot(data_long, aes(x = t, y = value, color = variable)) +
-#   geom_line(alpha = 1, linewidth = 1) +
-#   facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
-#   scale_color_manual(values = agent_colors) +
-#   theme_minimal() +
-#   labs(title = "Epithelial Cell Dynamics", x = "Time", y = "Count", color = "Agent")
-# print(p)
-# 
-# ######### CONFIRM
-# source("./MISC/PLOT_FUNCTIONS.R")
-# source("./MISC/DATA_READ_FUNCTIONS.R")
-# 
-# # ------------
-# results = longitudinal_df_500
-# results = results %>% left_join(params_df, by = 'param_set_id') 
-# results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
-#                                       5*epithelial_inj_1+
-#                                       4*epithelial_inj_2+
-#                                       3*epithelial_inj_3+
-#                                       2*epithelial_inj_4+
-#                                       1*epithelial_inj_5)
-# 
-# full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
-# min_reps  = min(full_data_comparison$rep_id)
-# max_reps  = max(full_data_comparison$rep_id)
-# t_max_ind = max(full_data_comparison$t)
-# all_comparison_results = c()
-# for (rep in min_reps:max_reps){  
-#   
-#   #### STERILE INJURY
-#   # tregs OFF
-#   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
-#   # tregs ON
-#   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-#   
-#   # --- Steady-state detection ---
-#   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
-#   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
-#   time_ss_vec = c(time_ss_0, time_ss_1)
-#   
-#   if(!any(is.na(time_ss_vec))){
-#     # --- Paired steady-state alignment points ---
-#     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-#     
-#     # --- Comparisons ---
-#     ## Treg OFF → ON (3 → 4)
-#     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
-#     scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
-#     d_01           = cohens_d(scores_01_0, scores_01_1)
-#     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
-#     time_vec       = time_ss_01:t_max_ind
-#     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-#     
-#     # --- Tabulate all comparisons ---
-#     comparison_results = data.frame(
-#       param_set_id = param_set_id_use,
-#       replicate_id = rep,
-#       comparison = c(
-#         "Treg_OFF_ON"
-#       ),
-#       injury_type = c("sterile"),
-#       ss_start    = c(time_ss_01),
-#       cohens_d    = c(d_01),
-#       mean_diff   = c(mean_diff_01),
-#       integ_diff  = c(integrated_diff_01)
-#     )
-#     
-#     # Append to global results
-#     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
-#   }
-# }
-# all_comparison_results_500 = all_comparison_results
-# 
-# # ------------
-# results = longitudinal_df_1500
-# results = results %>% left_join(params_df, by = 'param_set_id') 
-# results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
-#                                       5*epithelial_inj_1+
-#                                       4*epithelial_inj_2+
-#                                       3*epithelial_inj_3+
-#                                       2*epithelial_inj_4+
-#                                       1*epithelial_inj_5)
-# 
-# full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
-# min_reps  = min(full_data_comparison$rep_id)
-# max_reps  = max(full_data_comparison$rep_id)
-# t_max_ind = max(full_data_comparison$t)
-# all_comparison_results = c()
-# for (rep in min_reps:max_reps){  
-#   
-#   #### STERILE INJURY
-#   # tregs OFF
-#   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
-#   # tregs ON
-#   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-#   
-#   # --- Steady-state detection ---
-#   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
-#   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
-#   time_ss_vec = c(time_ss_0, time_ss_1)
-#   
-#   if(!any(is.na(time_ss_vec))){
-#     # --- Paired steady-state alignment points ---
-#     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-#     
-#     # --- Comparisons ---
-#     ## Treg OFF → ON (3 → 4)
-#     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
-#     scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
-#     d_01           = cohens_d(scores_01_0, scores_01_1)
-#     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
-#     time_vec       = time_ss_01:t_max_ind
-#     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-#     
-#     # --- Tabulate all comparisons ---
-#     comparison_results = data.frame(
-#       param_set_id = param_set_id_use,
-#       replicate_id = rep,
-#       comparison = c(
-#         "Treg_OFF_ON"
-#       ),
-#       injury_type = c("sterile"),
-#       ss_start    = c(time_ss_01),
-#       cohens_d    = c(d_01),
-#       mean_diff   = c(mean_diff_01),
-#       integ_diff  = c(integrated_diff_01)
-#     )
-#     
-#     # Append to global results
-#     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
-#   }
-# }
-# all_comparison_results_1500 = all_comparison_results
-# 
-# 
-# # ------------
-# results = longitudinal_df_5000
-# results = results %>% left_join(params_df, by = 'param_set_id') 
-# results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
-#                                       5*epithelial_inj_1+
-#                                       4*epithelial_inj_2+
-#                                       3*epithelial_inj_3+
-#                                       2*epithelial_inj_4+
-#                                       1*epithelial_inj_5)
-# 
-# full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
-# min_reps  = min(full_data_comparison$rep_id)
-# max_reps  = max(full_data_comparison$rep_id)
-# t_max_ind = max(full_data_comparison$t)
-# all_comparison_results = c()
-# for (rep in min_reps:max_reps){  
-#   
-#   #### STERILE INJURY
-#   # tregs OFF
-#   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
-#   # tregs ON
-#   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-#   
-#   # --- Steady-state detection ---
-#   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
-#   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
-#   time_ss_vec = c(time_ss_0, time_ss_1)
-#   
-#   if(!any(is.na(time_ss_vec))){
-#     # --- Paired steady-state alignment points ---
-#     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-#     
-#     # --- Comparisons ---
-#     ## Treg OFF → ON (3 → 4)
-#     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
-#     scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
-#     d_01           = cohens_d(scores_01_0, scores_01_1)
-#     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
-#     time_vec       = time_ss_01:t_max_ind
-#     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-#     
-#     # --- Tabulate all comparisons ---
-#     comparison_results = data.frame(
-#       param_set_id = param_set_id_use,
-#       replicate_id = rep,
-#       comparison = c(
-#         "Treg_OFF_ON"
-#       ),
-#       injury_type = c("sterile"),
-#       ss_start    = c(time_ss_01),
-#       cohens_d    = c(d_01),
-#       mean_diff   = c(mean_diff_01),
-#       integ_diff  = c(integrated_diff_01)
-#     )
-#     
-#     # Append to global results
-#     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
-#   }
-# }
-# all_comparison_results_5000 = all_comparison_results
+colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
+
+# saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
+#                                      '_sterile_',sterile,
+#                                      '_trnd_',randomize_tregs,
+#                                      '_tregs_',allow_tregs,'.rds'))
+# print(paste0('Data for param set id ',param_set_id_use,' saved 🥳.'))
+longitudinal_df_500  = longitudinal_df_keep %>% dplyr::filter(t<=500)
+longitudinal_df_1500 = longitudinal_df_keep %>% dplyr::filter(t<=1500)
+longitudinal_df_5000 = longitudinal_df_keep
+
+df_treg   = longitudinal_df_5000 %>% dplyr::filter(rep_id==9)
+variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
+variables = 'commensal'
+variables = c(paste0("phagocyte_M1_L_", 0:5))
+variables = c(paste0("phagocyte_M2_L_", 0:5))
+
+data_long = df_treg %>%
+  dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%
+  pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
+
+p=ggplot(data_long, aes(x = t, y = value, color = variable)) +
+  geom_line(alpha = 1, linewidth = 1) +
+  facet_grid(randomize_tregs ~ sterile + tregs_on , labeller = label_both) +
+  scale_color_manual(values = agent_colors) +
+  theme_minimal() +
+  labs(title = "Epithelial Cell Dynamics", x = "Time", y = "Count", color = "Agent")
+print(p)
+
+######### CONFIRM
+source("./MISC/PLOT_FUNCTIONS.R")
+source("./MISC/DATA_READ_FUNCTIONS.R")
+
+# ------------
+results = longitudinal_df_500
+results = results %>% left_join(params_df, by = 'param_set_id')
+results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
+                                      5*epithelial_inj_1+
+                                      4*epithelial_inj_2+
+                                      3*epithelial_inj_3+
+                                      2*epithelial_inj_4+
+                                      1*epithelial_inj_5)
+
+full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
+min_reps  = min(full_data_comparison$rep_id)
+max_reps  = max(full_data_comparison$rep_id)
+t_max_ind = max(full_data_comparison$t)
+all_comparison_results = c()
+for (rep in min_reps:max_reps){
+
+  #### STERILE INJURY
+  # tregs OFF
+  full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
+  # tregs ON
+  full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
+
+  # --- Steady-state detection ---
+  time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
+  time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
+  time_ss_vec = c(time_ss_0, time_ss_1)
+
+  if(!any(is.na(time_ss_vec))){
+    # --- Paired steady-state alignment points ---
+    time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
+
+    # --- Comparisons ---
+    ## Treg OFF → ON (3 → 4)
+    scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
+    scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
+    d_01           = cohens_d(scores_01_0, scores_01_1)
+    mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
+    time_vec       = time_ss_01:t_max_ind
+    integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
+
+    # --- Tabulate all comparisons ---
+    comparison_results = data.frame(
+      param_set_id = param_set_id_use,
+      replicate_id = rep,
+      comparison = c(
+        "Treg_OFF_ON"
+      ),
+      injury_type = c("sterile"),
+      ss_start    = c(time_ss_01),
+      cohens_d    = c(d_01),
+      mean_diff   = c(mean_diff_01),
+      integ_diff  = c(integrated_diff_01)
+    )
+
+    # Append to global results
+    all_comparison_results = bind_rows(all_comparison_results, comparison_results)
+  }
+}
+all_comparison_results_500 = all_comparison_results
+
+# ------------
+results = longitudinal_df_1500
+results = results %>% left_join(params_df, by = 'param_set_id')
+results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
+                                      5*epithelial_inj_1+
+                                      4*epithelial_inj_2+
+                                      3*epithelial_inj_3+
+                                      2*epithelial_inj_4+
+                                      1*epithelial_inj_5)
+
+full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
+min_reps  = min(full_data_comparison$rep_id)
+max_reps  = max(full_data_comparison$rep_id)
+t_max_ind = max(full_data_comparison$t)
+all_comparison_results = c()
+for (rep in min_reps:max_reps){
+
+  #### STERILE INJURY
+  # tregs OFF
+  full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
+  # tregs ON
+  full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
+
+  # --- Steady-state detection ---
+  time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
+  time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
+  time_ss_vec = c(time_ss_0, time_ss_1)
+
+  if(!any(is.na(time_ss_vec))){
+    # --- Paired steady-state alignment points ---
+    time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
+
+    # --- Comparisons ---
+    ## Treg OFF → ON (3 → 4)
+    scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
+    scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
+    d_01           = cohens_d(scores_01_0, scores_01_1)
+    mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
+    time_vec       = time_ss_01:t_max_ind
+    integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
+
+    # --- Tabulate all comparisons ---
+    comparison_results = data.frame(
+      param_set_id = param_set_id_use,
+      replicate_id = rep,
+      comparison = c(
+        "Treg_OFF_ON"
+      ),
+      injury_type = c("sterile"),
+      ss_start    = c(time_ss_01),
+      cohens_d    = c(d_01),
+      mean_diff   = c(mean_diff_01),
+      integ_diff  = c(integrated_diff_01)
+    )
+
+    # Append to global results
+    all_comparison_results = bind_rows(all_comparison_results, comparison_results)
+  }
+}
+all_comparison_results_1500 = all_comparison_results
+
+
+# ------------
+results = longitudinal_df_5000
+results = results %>% left_join(params_df, by = 'param_set_id')
+results = results %>% dplyr::mutate(epithelial_score = 6*epithelial_healthy+ # higher the score, healthier the epithelium!
+                                      5*epithelial_inj_1+
+                                      4*epithelial_inj_2+
+                                      3*epithelial_inj_3+
+                                      2*epithelial_inj_4+
+                                      1*epithelial_inj_5)
+
+full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
+min_reps  = min(full_data_comparison$rep_id)
+max_reps  = max(full_data_comparison$rep_id)
+t_max_ind = max(full_data_comparison$t)
+all_comparison_results = c()
+for (rep in min_reps:max_reps){
+
+  #### STERILE INJURY
+  # tregs OFF
+  full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
+  # tregs ON
+  full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
+
+  # --- Steady-state detection ---
+  time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
+  time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
+  time_ss_vec = c(time_ss_0, time_ss_1)
+
+  if(!any(is.na(time_ss_vec))){
+    # --- Paired steady-state alignment points ---
+    time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
+
+    # --- Comparisons ---
+    ## Treg OFF → ON (3 → 4)
+    scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
+    scores_01_1    = full_data_comparison_scores_1$epithelial_score[time_ss_01:t_max_ind]
+    d_01           = cohens_d(scores_01_0, scores_01_1)
+    mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
+    time_vec       = time_ss_01:t_max_ind
+    integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
+
+    # --- Tabulate all comparisons ---
+    comparison_results = data.frame(
+      param_set_id = param_set_id_use,
+      replicate_id = rep,
+      comparison = c(
+        "Treg_OFF_ON"
+      ),
+      injury_type = c("sterile"),
+      ss_start    = c(time_ss_01),
+      cohens_d    = c(d_01),
+      mean_diff   = c(mean_diff_01),
+      integ_diff  = c(integrated_diff_01)
+    )
+
+    # Append to global results
+    all_comparison_results = bind_rows(all_comparison_results, comparison_results)
+  }
+}
+all_comparison_results_5000 = all_comparison_results
