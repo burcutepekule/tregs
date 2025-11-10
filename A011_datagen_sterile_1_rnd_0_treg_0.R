@@ -74,6 +74,13 @@ k_in = 0.044
 x0_in = 50
 shift_by = 10
 
+if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')){
+  inds_read = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')
+}else{
+  inds_read = c()
+}
+loop_over = setdiff(loop_over, inds_read)
+
 # for(param_set_id_use in 0:9999){
 for(param_set_id_use in loop_over){
   param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
@@ -82,6 +89,11 @@ for(param_set_id_use in loop_over){
   
   random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
   stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
+  stream_in_long     = c()
+  for(k in 1:100){
+    stream_in_long = c(stream_in_long, stream_in)
+  }
+  print(length(stream_in_long))
   
   for (reps_in in 0:9){
     rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in",
@@ -94,7 +106,7 @@ for(param_set_id_use in loop_over){
                              "max_cell_value_ROS","max_cell_value_DAMPs","max_cell_value_SAMPs",
                              "lim_ROS","lim_DAMP","lim_SAMP","act_radius_ROS","act_radius_treg",
                              "act_radius_DAMPs","act_radius_SAMPs","k_in","x0_in","shift_by",
-                             "random_stream_file","stream_in")))
+                             "random_stream_file","stream_in_long")))
     
     # ============================================================================
     # LOAD FUNCTIONS
@@ -108,10 +120,10 @@ for(param_set_id_use in loop_over){
     # ============================================================================
 
     # # shift for every rep, can't afford to have so many rnd generators
-    stream_in_use      = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+    stream_in_use      = c(stream_in_long[(shift_by*reps_in+1):length(stream_in_long)], stream_in_long[1:(shift_by*reps_in)])
     
     # # shift for every rep, can't afford to have so many rnd generators
-    # stream_in_use = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+    # stream_in_use = c(stream_in_long[(shift_by*reps_in+1):length(stream_in_long)], stream_in_long[1:(shift_by*reps_in)])
     
     rng_env        = new.env()
     rng_env$stream = stream_in_use

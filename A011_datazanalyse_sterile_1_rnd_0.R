@@ -14,6 +14,7 @@ t_max                = 500
 tol_in               = 25*0.25
 
 df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0_old.rds')
+# df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
 df_raw_keep = df_raw
@@ -84,6 +85,11 @@ df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
 df_plot = df_raw_use %>%
   filter(high_var %in% c(0, 1)) %>%
   mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
+
+ggplot(df_plot, aes(x = activity_engulf_M2_baseline-activity_engulf_M1_baseline, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
 
 ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
   geom_density(alpha = 0.5) +
@@ -164,3 +170,72 @@ ggplot(df_plot, aes(x = (epith_recovery_chance), fill = high_var)) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
+###### MORE COMPOSITE METRICS
+df_plot = df_plot %>% dplyr::mutate(DAMP_potential = (add_DAMPs / DAMPs_decay) / activation_threshold_DAMPs)
+df_plot = df_plot %>% dplyr::mutate(SAMP_potential = (add_SAMPs / SAMPs_decay) / activation_threshold_SAMPs)
+df_plot = df_plot %>% dplyr::mutate(Signal_Ratio = DAMP_potential / SAMP_potential)
+df_plot = df_plot %>% dplyr::mutate(ROS_potential = (activity_ROS_M1_baseline / ros_decay) / th_ROS_epith_recover)
+df_plot = df_plot %>% dplyr::mutate(Feedback_Strength = rate_leak_commensal_injury / epith_recovery_chance)
+df_plot = df_plot %>% dplyr::mutate(Chronicity_Risk = Signal_Ratio * log(1 + Feedback_Strength))
+df_plot = df_plot %>% dplyr::mutate(Inflammatory_Index = (add_DAMPs / DAMPs_decay / activation_threshold_DAMPs) /
+                                      (add_SAMPs / SAMPs_decay / activation_threshold_SAMPs))
+df_plot = df_plot %>% dplyr::mutate(Inflammatory_Index_Extended = Inflammatory_Index *
+                                      sqrt(diffusion_speed_SAMPs / diffusion_speed_DAMPs))
+df_plot = df_plot %>% dplyr::mutate(Instability_Score = Signal_Ratio *
+                                      ROS_potential *
+                                      (1 / epith_recovery_chance) *
+                                      rate_leak_commensal_injury *
+                                      exp(-2 * treg_discrimination_efficiency))
+
+
+
+ggplot(df_plot, aes(x = log(Chronicity_Risk), fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+#----------------------------------
+pca_data = df_plot %>%
+  group_by(param_set_id) %>%
+  summarise(
+    standard_dev = sd,
+    add_DAMPs_norm = mean(add_DAMPs / DAMPs_decay),
+    add_SAMPs_norm = mean(add_SAMPs / SAMPs_decay),
+    inv_threshold_DAMPs = mean(1 / activation_threshold_DAMPs),
+    inv_threshold_SAMPs = mean(1 / activation_threshold_SAMPs),
+    diffusion_speed_DAMPs = mean(diffusion_speed_DAMPs),
+    diffusion_speed_SAMPs = mean(diffusion_speed_SAMPs),
+    rate_leak_commensal_injury = mean(rate_leak_commensal_injury),
+    inv_epith_recovery = mean(1 / epith_recovery_chance),
+    ROS_production = mean(activity_ROS_M1_baseline / ros_decay),
+    inv_ROS_threshold = mean(1 / th_ROS_epith_recover),
+    DAMPs_decay = mean(DAMPs_decay),
+    SAMPs_decay = mean(SAMPs_decay),
+    treg_discrimination = mean(treg_discrimination_efficiency),
+    .groups = 'drop'
+  )
+
+# Select parameters for PCA
+pca_matrix = pca_data %>%
+  select(add_DAMPs_norm, add_SAMPs_norm, inv_threshold_DAMPs, inv_threshold_SAMPs,
+         diffusion_speed_DAMPs, diffusion_speed_SAMPs,
+         rate_leak_commensal_injury, inv_epith_recovery,
+         ROS_production, inv_ROS_threshold, DAMPs_decay, SAMPs_decay,
+         treg_discrimination) %>%
+  as.matrix()
+
+pca_result = prcomp(pca_matrix, scale. = TRUE, center = TRUE)
+
+# Add PC scores to data
+pca_data$PC1 = pca_result$x[, 1]
+pca_data$PC2 = pca_result$x[, 2]
+pca_data$PC3 = pca_result$x[, 3]
+
+# Plot PCA biplot
+p_pca = ggplot(pca_data, aes(x = PC1, y = PC2, color = standard_dev)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_color_viridis(name = "Chronic\nFraction", limits = c(0, 1)) +
+  theme_minimal() +
+  labs(title = "PCA: Parameter Space Colored by Chronic Outcome",
+       x = paste0("PC1 (", round(summary(pca_result)$importance[2, 1] * 100, 1), "% variance)"),
+       y = paste0("PC2 (", round(summary(pca_result)$importance[2, 2] * 100, 1), "% variance)"))

@@ -7,7 +7,6 @@ library(readr)  # For read_csv
 library(stringr)
 library(zoo)
 
-
 source("./MISC/PLOT_FUNCTIONS.R")
 source("./MISC/DATA_READ_FUNCTIONS.R")
 
@@ -23,19 +22,21 @@ files_0   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_ste
 files_1   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_sterile_1_trnd_0_tregs_1.rds$", full.names = TRUE)
 indices_0 = str_extract(basename(files_0), "\\d+") |> as.numeric()
 indices_1 = str_extract(basename(files_1), "\\d+") |> as.numeric()
-max_index = min(max(indices_0), max(indices_1))
+indices   = intersect(indices_0, indices_1)
 
 # Initialize an empty results dataframe before the loop
 all_comparison_results = data.frame()
 
-if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_sterile_1_trnd_0.rds')){
-  start_id = 1+readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_sterile_1_trnd_0.rds')
+if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')){
+  inds_read = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')
 }else{
-  start_id = 0
+  inds_read = c()
 }
 
-if(start_id<max_index){
-  for (i in start_id:max_index){
+inds2read = setdiff(indices,inds_read)
+
+if(length(inds2read)>0){
+  for (i in inds2read){
     message("Processing param_set_", i)
     results_0    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_0.rds'))
     results_1    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_1.rds'))
@@ -100,16 +101,23 @@ if(start_id<max_index){
       }
     }
   }
-  message("Last param_id successfully added: ", max(all_comparison_results$param_set_id))
+  message("new param_id successfully added: ", inds2read)
   
-  saveRDS(max(all_comparison_results$param_set_id), '/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id_sterile_1_trnd_0.rds') 
+  #---- read previous file
+  if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')){
+    saveRDS(inds2read, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')
+  }else{
+    inds2read_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')
+    inds2read     = c(inds2read_old, inds2read)
+    saveRDS(inds2read, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_read_id_sterile_1_trnd_0.rds')
+  }
   
   #---- read previous file
   if(!file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')){
     saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
   }else{
     all_comparison_results_old = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
-    all_comparison_results = rbind(all_comparison_results_old, all_comparison_results)
+    all_comparison_results     = rbind(all_comparison_results_old, all_comparison_results)
     saveRDS(all_comparison_results, '/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
   }
 }else{

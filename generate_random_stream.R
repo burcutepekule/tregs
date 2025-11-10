@@ -6,10 +6,11 @@ library(tidyr)
 library(readr)
 
 
-total_draws_needed = 1e7
+total_draws_needed = 1e6
 
 # Generate random numbers using R's RNG
 for (int_in in 0:9999){
+  print(int_in)
   set.seed(int_in)  # For reproducibility of the stream itself
   random_stream = runif(total_draws_needed)
   
