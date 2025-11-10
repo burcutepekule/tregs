@@ -24,7 +24,6 @@ files_1   = list.files(path, pattern = "^longitudinal_df_param_set_id_\\d+\\_ste
 indices_0 = str_extract(basename(files_0), "\\d+") |> as.numeric()
 indices_1 = str_extract(basename(files_1), "\\d+") |> as.numeric()
 max_index = min(max(indices_0), max(indices_1))
-t_max_ind = 500 # max 500 time points
 
 # Initialize an empty results dataframe before the loop
 all_comparison_results = data.frame()
@@ -38,8 +37,8 @@ if(file.exists('/Users/burcutepekule/Desktop/tregs/all_comparison_results_max_id
 if(start_id<max_index){
   for (i in start_id:max_index){
     message("Processing param_set_", i)
-    results_0    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_tregs_0.rds'))
-    results_1    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_tregs_1.rds'))
+    results_0    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_0.rds'))
+    results_1    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',i,'_sterile_1_trnd_0_tregs_1.rds'))
     results      = rbind(results_0, results_1)
 
     # Merge
@@ -52,8 +51,9 @@ if(start_id<max_index){
                                           1*epithelial_inj_5)
     
     full_data_comparison = results %>% dplyr::select(param_set_id, sterile, tregs_on, randomize_tregs, rep_id, t, epithelial_score)
-    min_reps = min(full_data_comparison$rep_id)
-    max_reps = max(full_data_comparison$rep_id)
+    min_reps  = min(full_data_comparison$rep_id)
+    max_reps  = max(full_data_comparison$rep_id)
+    t_max_ind = max(full_data_comparison$t)
     
     for (rep in min_reps:max_reps){  
       
@@ -86,7 +86,7 @@ if(start_id<max_index){
           param_set_id = i,
           replicate_id = rep,
           comparison = c(
-            "Treg_OFF_ON",
+            "Treg_OFF_ON"
           ),
           injury_type = c("sterile"),
           ss_start    = c(time_ss_01),
