@@ -1,4 +1,4 @@
-rm(list=ls())
+# rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -48,10 +48,12 @@ df_raw     = df_raw %>% dplyr::mutate(effect_size = case_when(
   TRUE ~ "Large"
 ))
 
-# df_raw_plot_nz = df_raw %>% dplyr::filter(effect_size %in% c("Medium","Large") & (mean_diff>tol_in | mean_diff<(-1*tol_in)))
-# df_raw_plot_z  = df_raw %>% dplyr::filter((mean_diff<=tol_in | mean_diff>=(-1*tol_in))) # this is not true- what about effect_size small but abs(mean_diff)>tol_in?
-# df_raw_plot    = rbind(df_raw_plot_z, df_raw_plot_nz)
-# hist(df_raw_plot$mean_diff,30)
+df_raw_plot_nz = df_raw %>% dplyr::filter(effect_size %in% c("Medium","Large") & (mean_diff>tol_in | mean_diff<(-1*tol_in)))
+df_raw_plot_z  = df_raw %>% dplyr::filter((mean_diff<=tol_in & mean_diff>=(-1*tol_in))) # this is not true- what about effect_size small but abs(mean_diff)>tol_in?
+df_raw_plot    = rbind(df_raw_plot_z, df_raw_plot_nz)
+hist(df_raw_plot$mean_diff,30)
+
+table(df_raw_plot_nz$param_set_id)
 
 x   = df_raw$mean_diff
 round(100*sum(x>tol_in)/length(x),2)
@@ -59,12 +61,7 @@ round(100*sum(x<=tol_in & x>=(-1*tol_in))/length(x),2)
 round(100*sum(x<(-1*tol_in))/length(x),2)
 hist(x,30)
 
-table(df_raw$param_set_id)
+df_raw_plot_nz_neg = df_raw_plot_nz %>% dplyr::filter(mean_diff < 0)
 
-df_raw_neg = df_raw %>% dplyr::filter(mean_diff < -100)
-table(df_raw_neg$param_set_id)
-
-df_raw_neg_id = df_raw %>% dplyr::filter(param_set_id %in% df_raw_neg$param_set_id)
-table(df_raw_neg_id$param_set_id)
-
+df_raw_plot_inv = df_raw %>% dplyr::filter(param_set_id==95)
 

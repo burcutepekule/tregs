@@ -94,7 +94,8 @@ for(param_set_id_use in 0:9999){
     # ============================================================================
     
     # shift for every rep, can't afford to have so many rnd generators
-    stream_in_use  = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:shift_by*reps_in]) 
+    stream_in_use = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+    
     rng_env        = new.env()
     rng_env$stream = stream_in_use
     rng_env$index  = 1
@@ -658,9 +659,15 @@ for(param_set_id_use in 0:9999){
       # CRITICAL: Always consume random numbers to maintain stream synchronization!
       # ========================================================================
       M1_phagocyte_indices = which(phagocyte_phenotype == 1)
+      M2_phagocyte_indices = which(phagocyte_phenotype == 2)
+      M_activate_phagocyte_indices = c(M1_phagocyte_indices,M2_phagocyte_indices)
       
-      if (length(M1_phagocyte_indices) > 0) {
-        for (i in M1_phagocyte_indices) {
+      # OLD - ONLY M1 - THINK WHETHER THIS MADE MORE SENSE?
+      # if (length(M1_phagocyte_indices) > 0) {
+      #   for (i in M1_phagocyte_indices) {
+      
+      if (length(M_activate_phagocyte_indices) > 0) {
+        for (i in M_activate_phagocyte_indices) {
           px = phagocyte_x[i]
           py = phagocyte_y[i]
           
