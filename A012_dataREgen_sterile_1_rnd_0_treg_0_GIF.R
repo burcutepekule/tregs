@@ -14,9 +14,6 @@ dir.create(dir_name, showWarnings = FALSE)
 dir_name_data = './mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
 
-random_stream_file = paste0("./random_streams/random_numbers_seed_0.csv")
-stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
-
 # Default values
 sterile              = 1 # 0 = infection, 1 = sterile injury
 allow_tregs_vec      = c(0,1)   # Allow tregs to do their job
@@ -65,7 +62,16 @@ k_in = 0.044
 x0_in = 50
 shift_by = 100
 
-param_set_id_use = 95
+param_set_id_use = 5091
+random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
+stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
+stream_in_long     = c()
+for(k in 1:150){
+  stream_in_long = c(stream_in_long, stream_in)
+}
+print(length(stream_in_long))
+
+
 param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
 longitudinal_df_keep = c()
 print(paste0('Processing param set ',param_set_id_use,' 😱...'))

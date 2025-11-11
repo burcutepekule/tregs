@@ -9,7 +9,7 @@ library(zoo)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 inj_type             = 'sterile'
-ss_start_threshold   = 2500
+ss_start_threshold   = 4500
 t_max                = 5000
 tol_in               = 25*0.25
 
@@ -70,6 +70,7 @@ var_df = df_raw_plot %>%
     mean = mean(mean_diff),
     min = min(mean_diff),
     max = max(mean_diff),
+    abs_diff = abs(max-min),
     n_replicates = n()
   ) %>%
   arrange(desc(variance))
@@ -77,24 +78,24 @@ var_df = df_raw_plot %>%
 
 df_raw = df_raw %>% inner_join(var_df, by='param_set_id')
 df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd>1,1,0))
-df_raw_use = distinct(df_raw[c('param_set_id','sd','mean','min','max','high_var')])
+df_raw_use = distinct(df_raw[c('param_set_id','sd','mean','min','max','abs_diff','high_var')])
 df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
 
 # ------------
 df_raw_plot_nz = df_raw_plot_nz %>% inner_join(var_df, by='param_set_id')
 
 plot(df_raw_plot_nz$sd, df_raw_plot_nz$mean)
-abline(lm(mean ~ sd, data = df_raw_use_nz), col = "red")
+abline(lm(mean ~ sd, data = df_raw_plot_nz), col = "red")
 
-plot(df_raw_plot_nz$sd, df_raw_plot_nz$min)
-abline(lm(min ~ sd, data = df_raw_use_nz), col = "red")
+plot(df_raw_use$sd, df_raw_use$min)
+abline(lm(min ~ sd, data = df_raw_use), col = "red")
 
 # Filter for the two groups
 df_plot = df_raw_use %>%
   filter(high_var %in% c(0, 1)) %>%
   mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
 
-ggplot(df_plot, aes(x = min, fill = high_var)) +
+ggplot(df_plot, aes(x = mean, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -114,7 +115,7 @@ ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = log10(SAMPs_decay/DAMPs_decay), fill = high_var)) +
+ggplot(df_plot, aes(x = (SAMPs_decay-DAMPs_decay), fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
