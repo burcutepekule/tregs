@@ -63,7 +63,7 @@ k_in = 0.044
 x0_in = 50
 shift_by = 10
 
-param_set_id_use   = 5091
+param_set_id_use   = 2588 #2588/3, 5091/2
 random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
 stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 stream_in_long     = c()
@@ -79,7 +79,7 @@ print(paste0('Processing param set ',param_set_id_use,' 😱'))
 for(sterile in sterile_vec){
   for(allow_tregs in allow_tregs_vec){
     # for (reps_in in 0:9){
-    for (reps_in in 2){
+    for (reps_in in 3){
       print(c(sterile, allow_tregs, reps_in))
       rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long","sterile_vec",
                                "sterile","allow_tregs","randomize_tregs","allow_tregs_vec",
