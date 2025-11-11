@@ -60,7 +60,7 @@ act_radius_SAMPs = 1
 # Logistic function parameters (for epithelial injury calculation)
 k_in = 0.044
 x0_in = 50
-shift_by = 100
+shift_by = 10
 
 param_set_id_use   = 5091
 random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
@@ -136,7 +136,7 @@ longitudinal_df_500  = longitudinal_df_keep %>% dplyr::filter(t<=500)
 longitudinal_df_1500 = longitudinal_df_keep %>% dplyr::filter(t<=1500)
 longitudinal_df_5000 = longitudinal_df_keep
 
-df_treg   = longitudinal_df_5000 %>% dplyr::filter(rep_id==9)
+df_treg   = longitudinal_df_5000 
 variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
 variables = 'commensal'
 variables = c(paste0("phagocyte_M1_L_", 0:5))
