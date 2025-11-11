@@ -90,6 +90,9 @@ abline(lm(mean ~ sd, data = df_raw_plot_nz), col = "red")
 plot(df_raw_use$sd, df_raw_use$min)
 abline(lm(min ~ sd, data = df_raw_use), col = "red")
 
+df_raw_plot_nz = df_raw_plot_nz %>% inner_join(df_params, by='param_set_id')
+plot(df_raw_plot_nz$activity_engulf_M1_baseline, df_raw_plot_nz$abs_diff)
+
 # Filter for the two groups
 df_plot = df_raw_use %>%
   filter(high_var %in% c(0, 1)) %>%
@@ -129,10 +132,6 @@ ggplot(df_plot, aes(x = treg_discrimination_efficiency, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
-
-df_plot_low = df_plot %>% dplyr::filter(high_var=='High Variance')
-hist(df_plot_low$treg_discrimination_efficiency)
-plot(df_plot_low$treg_discrimination_efficiency, df_plot_low$mean)
 
 ggplot(df_plot, aes(x = (diffusion_speed_DAMPs), fill = high_var)) +
   geom_density(alpha = 0.5) +
