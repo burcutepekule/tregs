@@ -9,12 +9,13 @@ library(zoo)
 
 source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 inj_type             = 'sterile'
-ss_start_threshold   = 450
-t_max                = 500
+ss_start_threshold   = 2500
+t_max                = 5000
 tol_in               = 25*0.25
 
-df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0_old.rds')
-# df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
+# df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0_old.rds')
+df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
+length(unique(df_raw$param_set_id))
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
 df_raw_keep = df_raw
@@ -54,16 +55,14 @@ df_raw_plot_z  = df_raw %>% dplyr::filter((mean_diff<=tol_in & mean_diff>=(-1*to
 df_raw_plot    = rbind(df_raw_plot_z, df_raw_plot_nz)
 hist(df_raw_plot$mean_diff,30)
 
-table(df_raw_plot_nz$param_set_id)
-
-x   = df_raw$mean_diff
+x   = df_raw_plot$mean_diff
 round(100*sum(x>tol_in)/length(x),2)
 round(100*sum(x<=tol_in & x>=(-1*tol_in))/length(x),2)
 round(100*sum(x<(-1*tol_in))/length(x),2)
 hist(x,30)
 
 #-----------
-var_df = df_raw %>%
+var_df = df_raw_plot %>%
   group_by(param_set_id) %>%
   summarise(
     variance = var(mean_diff),
@@ -81,12 +80,31 @@ df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd>1,1,0))
 df_raw_use = distinct(df_raw[c('param_set_id','sd','mean','min','max','high_var')])
 df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
 
+# ------------
+df_raw_plot_nz = df_raw_plot_nz %>% inner_join(var_df, by='param_set_id')
+
+plot(df_raw_plot_nz$sd, df_raw_plot_nz$mean)
+abline(lm(mean ~ sd, data = df_raw_use_nz), col = "red")
+
+plot(df_raw_plot_nz$sd, df_raw_plot_nz$min)
+abline(lm(min ~ sd, data = df_raw_use_nz), col = "red")
+
 # Filter for the two groups
 df_plot = df_raw_use %>%
   filter(high_var %in% c(0, 1)) %>%
   mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
 
-ggplot(df_plot, aes(x = activity_engulf_M2_baseline-activity_engulf_M1_baseline, fill = high_var)) +
+ggplot(df_plot, aes(x = min, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = activity_engulf_M1_baseline, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = activity_engulf_M2_baseline, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -110,7 +128,8 @@ ggplot(df_plot, aes(x = treg_discrimination_efficiency, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
-df_plot_low = df_plot %>% dplyr::filter(high_var=='Low Variance')
+
+df_plot_low = df_plot %>% dplyr::filter(high_var=='High Variance')
 hist(df_plot_low$treg_discrimination_efficiency)
 plot(df_plot_low$treg_discrimination_efficiency, df_plot_low$mean)
 
@@ -129,43 +148,47 @@ ggplot(df_plot, aes(x = (SAMPs_decay), fill = high_var)) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = (activation_threshold_DAMPs), fill = high_var)) +
+# ------- VERY CLEAR?
+ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = (activation_threshold_DAMPs-activation_threshold_SAMPs), fill = high_var)) +
+ggplot(df_plot, aes(x = activation_threshold_DAMPs-activation_threshold_SAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = (DAMPs_decay-SAMPs_decay), fill = high_var)) +
+ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = (diffusion_speed_DAMPs-diffusion_speed_SAMPs), fill = high_var)) +
+# ------- VERY CLEAR?
+ggplot(df_plot, aes(x = diffusion_speed_DAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = (diffusion_speed_SAMPs), fill = high_var)) +
+ggplot(df_plot, aes(x = diffusion_speed_SAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = activation_threshold_DAMPs-(add_DAMPs/DAMPs_decay), fill = high_var)) +
+ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = activation_threshold_DAMPs-(add_DAMPs-diffusion_speed_DAMPs-DAMPs_decay), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
 
 ### epith_recovery_chance (line 769): If too low, injury never heals, commensal leakage persists
-ggplot(df_plot, aes(x = (epith_recovery_chance), fill = high_var)) +
+ggplot(df_plot, aes(x = epith_recovery_chance, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+### recoevry in general?
+ggplot(df_plot, aes(x = th_ROS_epith_recover+epith_recovery_chance, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -189,7 +212,7 @@ df_plot = df_plot %>% dplyr::mutate(Instability_Score = Signal_Ratio *
 
 
 
-ggplot(df_plot, aes(x = log(Chronicity_Risk), fill = high_var)) +
+ggplot(df_plot, aes(x = log(Instability_Score), fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -232,6 +255,8 @@ pca_data$PC2 = pca_result$x[, 2]
 pca_data$PC3 = pca_result$x[, 3]
 
 # Plot PCA biplot
+library(viridis)
+
 p_pca = ggplot(pca_data, aes(x = PC1, y = PC2, color = standard_dev)) +
   geom_point(alpha = 0.6, size = 2) +
   scale_color_viridis(name = "Chronic\nFraction", limits = c(0, 1)) +
@@ -239,3 +264,4 @@ p_pca = ggplot(pca_data, aes(x = PC1, y = PC2, color = standard_dev)) +
   labs(title = "PCA: Parameter Space Colored by Chronic Outcome",
        x = paste0("PC1 (", round(summary(pca_result)$importance[2, 1] * 100, 1), "% variance)"),
        y = paste0("PC2 (", round(summary(pca_result)$importance[2, 2] * 100, 1), "% variance)"))
+p_pca
