@@ -17,7 +17,8 @@ dir.create(dir_name_data, showWarnings = FALSE)
 # Default values
 sterile_vec          = c(0,1) # 0 = infection, 1 = sterile injury
 allow_tregs_vec      = c(0,1) # Allow tregs to do their job
-randomize_tregs      = 0   # 0 = follow DAMPs, 1 = random movement
+# randomize_tregs_vec  = c(0,1) # 0 = follow DAMPs, 1 = random movement
+randomize_tregs      = 0 # 0 = follow DAMPs, 1 = random movement
 use_synchronized_rng = TRUE  # Use synchronized random numbers for fair comparisons
 
 colnames_insert = c('epithelial_healthy','epithelial_inj_1','epithelial_inj_2','epithelial_inj_3','epithelial_inj_4','epithelial_inj_5',
@@ -83,6 +84,7 @@ for(sterile in sterile_vec){
       rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long","sterile_vec",
                                "sterile","allow_tregs","randomize_tregs","allow_tregs_vec",
                                "use_synchronized_rng","params_df","param_set_use",
+                               "randomize_tregs_vec",
                                "colnames_insert","longitudinal_df_keep",
                                "dir_name_data","dir_name","t_max","plot_on",
                                "plot_every","grid_size","n_phagocytes","n_tregs",
