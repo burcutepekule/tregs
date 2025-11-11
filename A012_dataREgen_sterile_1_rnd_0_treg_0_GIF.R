@@ -80,8 +80,8 @@ for(sterile in sterile_vec){
     # for (reps_in in 0:9){
     for (reps_in in 2){
       print(c(sterile, allow_tregs, reps_in))
-      rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long",
-                               "sterile","allow_tregs","randomize_tregs",
+      rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long","sterile_vec",
+                               "sterile","allow_tregs","randomize_tregs","allow_tregs_vec",
                                "use_synchronized_rng","params_df","param_set_use",
                                "colnames_insert","longitudinal_df_keep",
                                "dir_name_data","dir_name","t_max","plot_on",
