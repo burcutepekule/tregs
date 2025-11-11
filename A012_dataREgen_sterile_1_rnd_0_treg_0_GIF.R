@@ -63,7 +63,8 @@ k_in = 0.044
 x0_in = 50
 shift_by = 10
 
-param_set_id_use   = 2588 #2588/3, 5091/2
+param_set_id_use   = 168 # 5091/2
+rep_vec            = 4
 random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
 stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 stream_in_long     = c()
@@ -79,12 +80,12 @@ print(paste0('Processing param set ',param_set_id_use,' 😱'))
 for(sterile in sterile_vec){
   for(allow_tregs in allow_tregs_vec){
     # for (reps_in in 0:9){
-    for (reps_in in 3){
+    for (reps_in in rep_vec){
       print(c(sterile, allow_tregs, reps_in))
       rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long","sterile_vec",
                                "sterile","allow_tregs","randomize_tregs","allow_tregs_vec",
                                "use_synchronized_rng","params_df","param_set_use",
-                               "randomize_tregs_vec",
+                               "randomize_tregs_vec","rep_vec",
                                "colnames_insert","longitudinal_df_keep",
                                "dir_name_data","dir_name","t_max","plot_on",
                                "plot_every","grid_size","n_phagocytes","n_tregs",
