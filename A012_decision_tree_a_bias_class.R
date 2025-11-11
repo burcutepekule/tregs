@@ -15,8 +15,8 @@ df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_s
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
 inj_type             = 'sterile'
-ss_start_threshold   = 450
-t_max                = 500
+ss_start_threshold   = 4500
+t_max                = 5000
 tol_in               = 25*0.25
 
 df_model = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
@@ -141,9 +141,9 @@ ctree_model = ctree(dominant_outcome ~ .,
                       # === Splitting criteria ===
                       mincriterion = 0.90, # 1-p-value threshold (higher = stricter splits)
                       # === Node size controls ===
-                      minsplit = 3,               # Min observations to attempt a split
-                      minbucket = 3,              # Min observations in terminal node
-                      maxdepth = 5,               # Max tree depth (0 = unlimited)
+                      minsplit = 10,               # Min observations to attempt a split
+                      minbucket = 5,              # Min observations in terminal node
+                      maxdepth = 3,               # Max tree depth (0 = unlimited)
                       testtype = "Univariate"    # Multiple testing correction
                     ))
 

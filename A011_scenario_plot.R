@@ -7,7 +7,7 @@ source("/Users/burcutepekule/Dropbox/Treg_problem_v2/MISC/PLOT_FUNCTIONS.R")
 # Load all files
 
 param_id     = 5091
-rep_ind      = 8 # 0, 1, 3, 4, 5, 9 Tregs better, 2, Tregs worse, 6, 7, 8 same
+rep_ind      = 2 # 0, 1, 3, 4, 5, 9 Tregs better, 2, Tregs worse, 6, 7, 8 same
 
 results_0    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',param_id,'_sterile_1_trnd_0_tregs_0.rds'))
 results_1    = readRDS(paste0('./mass_sim_results_R/longitudinal_df_param_set_id_',param_id,'_sterile_1_trnd_0_tregs_1.rds'))

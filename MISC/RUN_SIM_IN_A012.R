@@ -4,7 +4,7 @@
 # ============================================================================
 
 # shift for every rep, can't afford to have so many rnd generators
-stream_in_use = c(stream_in[(shift_by*reps_in+1):length(stream_in)], stream_in[1:(shift_by*reps_in)])
+stream_in_use = c(stream_in_long[(shift_by*reps_in+1):length(stream_in_long)], stream_in_long[1:(shift_by*reps_in)])
 
 rng_env        = new.env()
 rng_env$stream = stream_in_use

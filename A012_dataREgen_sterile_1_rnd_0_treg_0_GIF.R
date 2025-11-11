@@ -15,8 +15,8 @@ dir_name_data = './mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 # Default values
-sterile              = 1 # 0 = infection, 1 = sterile injury
-allow_tregs_vec      = c(0,1)   # Allow tregs to do their job
+sterile_vec          = c(0,1) # 0 = infection, 1 = sterile injury
+allow_tregs_vec      = c(0,1) # Allow tregs to do their job
 randomize_tregs      = 0   # 0 = follow DAMPs, 1 = random movement
 use_synchronized_rng = TRUE  # Use synchronized random numbers for fair comparisons
 
@@ -33,8 +33,8 @@ params_df = read.csv("./original_lhs_parameters.csv", stringsAsFactors = FALSE)
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
-t_max      = 5000
-plot_on    = 1
+t_max      = 2000
+plot_on    = 0
 plot_every = 25
 grid_size  = 25
 n_phagocytes = round(grid_size * grid_size * 0.35)
@@ -62,7 +62,7 @@ k_in = 0.044
 x0_in = 50
 shift_by = 100
 
-param_set_id_use = 5091
+param_set_id_use   = 5091
 random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
 stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 stream_in_long     = c()
@@ -73,57 +73,58 @@ print(length(stream_in_long))
 
 param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
 longitudinal_df_keep = c()
-print(paste0('Processing param set ',param_set_id_use,' 😱...'))
+print(paste0('Processing param set ',param_set_id_use,' 😱'))
 
-for(allow_tregs in allow_tregs_vec){
-  # for (reps_in in 0:9){
-  for (reps_in in 9){
-    print(c(allow_tregs, reps_in))
-    rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in",
-                             "sterile","allow_tregs","randomize_tregs",
-                             "use_synchronized_rng","params_df","param_set_use",
-                             "colnames_insert","longitudinal_df_keep",
-                             "dir_name_data","dir_name","t_max","plot_on",
-                             "plot_every","grid_size","n_phagocytes","n_tregs",
-                             "n_commensals_lp","injury_percentage","max_level_injury",
-                             "max_cell_value_ROS","max_cell_value_DAMPs","max_cell_value_SAMPs",
-                             "lim_ROS","lim_DAMP","lim_SAMP","act_radius_ROS","act_radius_treg",
-                             "act_radius_DAMPs","act_radius_SAMPs","k_in","x0_in","shift_by")))
-    
-    # ============================================================================
-    # LOAD FUNCTIONS
-    # ============================================================================
-    
-    source("./MISC/FAST_FUNCTIONS.R")
-    source("./MISC/PLOT_FUNCTIONS.R")
-    source("./MISC/RUN_SIM_IN_A012.R")
-    
-    # ============================================================================
-    # CREATE VIDEO
-    # ============================================================================
-    pattern = paste0("^frame_param_", param_set_id_use, "_rep_", reps_in,"_sterile_", sterile, "_tregs_", allow_tregs,
-                     "_trnd_", randomize_tregs, "_\\d+\\.png$")
-    
-    png_files = list.files(dir_name, full.names = TRUE, pattern = pattern)
-    png_files = png_files[order(as.numeric(gsub(".*_(\\d+)\\.png$", "\\1", png_files)))]
-    video_out = paste0(dir_name, "/simulation_sterile", sterile, "_tregs_", allow_tregs,
-                       "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, ".mp4")
-
-    if (length(png_files) > 0) {
-      av_encode_video(
-        input = png_files,
-        output = video_out,
-        framerate = 5,
-        vfilter = "scale=1000:-2",
-        codec = "libx264"
-      )
-      cat(sprintf("\nVideo created: %s\n", video_out))
-    } else {
-      cat("\nNo frames found for video creation.\n")
+for(sterile in sterile_vec){
+  for(allow_tregs in allow_tregs_vec){
+    # for (reps_in in 0:9){
+    for (reps_in in 2){
+      print(c(sterile, allow_tregs, reps_in))
+      rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long",
+                               "sterile","allow_tregs","randomize_tregs",
+                               "use_synchronized_rng","params_df","param_set_use",
+                               "colnames_insert","longitudinal_df_keep",
+                               "dir_name_data","dir_name","t_max","plot_on",
+                               "plot_every","grid_size","n_phagocytes","n_tregs",
+                               "n_commensals_lp","injury_percentage","max_level_injury",
+                               "max_cell_value_ROS","max_cell_value_DAMPs","max_cell_value_SAMPs",
+                               "lim_ROS","lim_DAMP","lim_SAMP","act_radius_ROS","act_radius_treg",
+                               "act_radius_DAMPs","act_radius_SAMPs","k_in","x0_in","shift_by")))
+      
+      # ============================================================================
+      # LOAD FUNCTIONS
+      # ============================================================================
+      
+      source("./MISC/FAST_FUNCTIONS.R")
+      source("./MISC/PLOT_FUNCTIONS.R")
+      source("./MISC/RUN_SIM_IN_A012.R")
+      
+      # ============================================================================
+      # CREATE VIDEO
+      # ============================================================================
+      pattern = paste0("^frame_param_", param_set_id_use, "_rep_", reps_in,"_sterile_", sterile, "_tregs_", allow_tregs,
+                       "_trnd_", randomize_tregs, "_\\d+\\.png$")
+      
+      png_files = list.files(dir_name, full.names = TRUE, pattern = pattern)
+      png_files = png_files[order(as.numeric(gsub(".*_(\\d+)\\.png$", "\\1", png_files)))]
+      video_out = paste0(dir_name, "/simulation_sterile", sterile, "_tregs_", allow_tregs,
+                         "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, ".mp4")
+      
+      if (length(png_files) > 0) {
+        av_encode_video(
+          input = png_files,
+          output = video_out,
+          framerate = 5,
+          vfilter = "scale=1000:-2",
+          codec = "libx264"
+        )
+        cat(sprintf("\nVideo created: %s\n", video_out))
+      } else {
+        cat("\nNo frames found for video creation.\n")
+      }
     }
   }
 }
-
 colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
 
 # saveRDS(longitudinal_df_keep, paste0(dir_name_data,'/longitudinal_df_param_set_id_',param_set_id_use,
@@ -173,22 +174,22 @@ max_reps  = max(full_data_comparison$rep_id)
 t_max_ind = max(full_data_comparison$t)
 all_comparison_results = c()
 for (rep in min_reps:max_reps){
-
+  
   #### STERILE INJURY
   # tregs OFF
   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
   # tregs ON
   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-
+  
   # --- Steady-state detection ---
   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
   time_ss_vec = c(time_ss_0, time_ss_1)
-
+  
   if(!any(is.na(time_ss_vec))){
     # --- Paired steady-state alignment points ---
     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-
+    
     # --- Comparisons ---
     ## Treg OFF → ON (3 → 4)
     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
@@ -197,7 +198,7 @@ for (rep in min_reps:max_reps){
     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
     time_vec       = time_ss_01:t_max_ind
     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-
+    
     # --- Tabulate all comparisons ---
     comparison_results = data.frame(
       param_set_id = param_set_id_use,
@@ -211,7 +212,7 @@ for (rep in min_reps:max_reps){
       mean_diff   = c(mean_diff_01),
       integ_diff  = c(integrated_diff_01)
     )
-
+    
     # Append to global results
     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
   }
@@ -234,22 +235,22 @@ max_reps  = max(full_data_comparison$rep_id)
 t_max_ind = max(full_data_comparison$t)
 all_comparison_results = c()
 for (rep in min_reps:max_reps){
-
+  
   #### STERILE INJURY
   # tregs OFF
   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
   # tregs ON
   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-
+  
   # --- Steady-state detection ---
   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
   time_ss_vec = c(time_ss_0, time_ss_1)
-
+  
   if(!any(is.na(time_ss_vec))){
     # --- Paired steady-state alignment points ---
     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-
+    
     # --- Comparisons ---
     ## Treg OFF → ON (3 → 4)
     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
@@ -258,7 +259,7 @@ for (rep in min_reps:max_reps){
     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
     time_vec       = time_ss_01:t_max_ind
     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-
+    
     # --- Tabulate all comparisons ---
     comparison_results = data.frame(
       param_set_id = param_set_id_use,
@@ -272,7 +273,7 @@ for (rep in min_reps:max_reps){
       mean_diff   = c(mean_diff_01),
       integ_diff  = c(integrated_diff_01)
     )
-
+    
     # Append to global results
     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
   }
@@ -296,22 +297,22 @@ max_reps  = max(full_data_comparison$rep_id)
 t_max_ind = max(full_data_comparison$t)
 all_comparison_results = c()
 for (rep in min_reps:max_reps){
-
+  
   #### STERILE INJURY
   # tregs OFF
   full_data_comparison_scores_0 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==0)
   # tregs ON
   full_data_comparison_scores_1 = full_data_comparison %>% dplyr::filter(rep_id==rep & sterile==1 & tregs_on ==1)
-
+  
   # --- Steady-state detection ---
   time_ss_0   = steady_state_idx(full_data_comparison_scores_0$epithelial_score)
   time_ss_1   = steady_state_idx(full_data_comparison_scores_1$epithelial_score)
   time_ss_vec = c(time_ss_0, time_ss_1)
-
+  
   if(!any(is.na(time_ss_vec))){
     # --- Paired steady-state alignment points ---
     time_ss_01 = max(c(time_ss_0, time_ss_1)) # Treg OFF → ON
-
+    
     # --- Comparisons ---
     ## Treg OFF → ON (3 → 4)
     scores_01_0    = full_data_comparison_scores_0$epithelial_score[time_ss_01:t_max_ind]
@@ -320,7 +321,7 @@ for (rep in min_reps:max_reps){
     mean_diff_01   = mean(scores_01_1) - mean(scores_01_0)
     time_vec       = time_ss_01:t_max_ind
     integrated_diff_01 = sum(diff(time_vec) * zoo::rollmean(scores_01_1 - scores_01_0, 2)) # integrate using trapezoidal rule
-
+    
     # --- Tabulate all comparisons ---
     comparison_results = data.frame(
       param_set_id = param_set_id_use,
@@ -334,7 +335,7 @@ for (rep in min_reps:max_reps){
       mean_diff   = c(mean_diff_01),
       integ_diff  = c(integrated_diff_01)
     )
-
+    
     # Append to global results
     all_comparison_results = bind_rows(all_comparison_results, comparison_results)
   }
