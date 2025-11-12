@@ -1,4 +1,4 @@
-# rm(list=ls())
+rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -14,37 +14,25 @@ t_max                = 5000
 tol_in               = 25*0.25
 
 # df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0_old.rds')
-df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
+# df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_sterile_1_trnd_0.rds')
+df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_A13_sterile_1_trnd_0.rds')
 length(unique(df_raw$param_set_id))
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
-hist(df_raw$treg_off_score)
-hist(df_raw$treg_on_score)
+hist(df_raw$mean_treg_off)
+hist(df_raw$mean_treg_on)
 
 df_raw_keep = df_raw
 df_raw = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
-hist(df_raw_keep$mean_diff)
 hist(df_raw_keep$mean_diff)
 
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
 param_id_all_below = df_raw %>%
   dplyr::group_by(param_set_id) %>%
-  dplyr::summarise(all_below = all(ss_start < ss_start_threshold), .groups = "drop") %>%
+  dplyr::summarise(all_below = all(ss_start_tregs_off <= ss_start_threshold & ss_start_tregs_on <= ss_start_threshold), .groups = "drop") %>%
   dplyr::filter(all_below) %>%
   dplyr::pull(param_set_id)
 df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_below)
-
-#----- filter based on replicate_id, less than 10 means incomplete!
-# param_id_all_complete = df_raw %>%
-#   # dplyr::group_by(param_set_id, comparison, injury_type) %>%
-#   dplyr::group_by(param_set_id, comparison) %>%
-#   dplyr::summarise(all_complete = (n_distinct(replicate_id) == 10), .groups = "drop") %>%
-#   dplyr::group_by(param_set_id) %>%
-#   dplyr::summarise(all_complete = all(all_complete), .groups = "drop") %>%
-#   dplyr::filter(all_complete) %>%
-#   dplyr::pull(param_set_id)
-# df_raw = df_raw %>% dplyr::filter(param_set_id %in% param_id_all_complete)
-# length(unique(param_id_all_complete)) 
 
 df_raw     = df_raw %>% dplyr::mutate(abs_cohens_d = abs(cohens_d))
 df_raw     = df_raw %>% dplyr::mutate(effect_size = case_when(
@@ -54,8 +42,8 @@ df_raw     = df_raw %>% dplyr::mutate(effect_size = case_when(
   TRUE ~ "Large"
 ))
 
-df_raw_plot_nz = df_raw %>% dplyr::filter(effect_size %in% c("Medium","Large") & (mean_diff>tol_in | mean_diff<(-1*tol_in)))
-df_raw_plot_z  = df_raw %>% dplyr::filter((mean_diff<=tol_in & mean_diff>=(-1*tol_in))) # this is not true- what about effect_size small but abs(mean_diff)>tol_in?
+df_raw_plot_nz = df_raw %>% dplyr::filter(effect_size %in% c("Medium","Large") & (mean_diff_on_off>tol_in | mean_diff_on_off<(-1*tol_in)))
+df_raw_plot_z  = df_raw %>% dplyr::filter((mean_diff_on_off<=tol_in & mean_diff_on_off>=(-1*tol_in))) # this is not true- what about effect_size small but abs(mean_diff)>tol_in?
 df_raw_plot    = rbind(df_raw_plot_z, df_raw_plot_nz)
 hist(df_raw_plot$mean_diff,30)
 
@@ -66,222 +54,96 @@ round(100*sum(x<(-1*tol_in))/length(x),2)
 hist(x,30)
 
 #-----------
-var_df = df_raw_plot %>%
+# var_df = df_raw_plot %>%
+var_df = df_raw %>%
   group_by(param_set_id) %>%
   summarise(
-    variance = var(mean_diff),
-    sd = sd(mean_diff),
-    sd_on = sd(treg_on_score),
-    sd_off = sd(treg_off_score),
-    mean_on = mean(treg_on_score),
-    mean_off = mean(treg_off_score),
-    mean = mean(mean_diff),
-    min = min(mean_diff),
-    max = max(mean_diff),
-    abs_diff = abs(max-min),
+    sd_on = sd(mean_treg_on),
+    sd_off = sd(mean_treg_off),
+    mean_on = mean(mean_treg_on),
+    mean_off = mean(mean_treg_off),
+    mean = mean(mean_diff_on_off),
+    min = min(mean_diff_on_off),
+    max = max(mean_diff_on_off),
+    variance = var(mean_diff_on_off),
+    sd = sd(mean_diff_on_off),
     n_replicates = n()
   ) %>%
   arrange(desc(variance))
 
-
-df_raw_2722 = df_raw %>% dplyr::filter(param_set_id==2722)
-df_raw_7509 = df_raw %>% dplyr::filter(param_set_id==7509)
-
 df_raw = df_raw %>% inner_join(var_df, by='param_set_id')
-df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd>1,1,0))
-df_raw_use = distinct(df_raw[c('param_set_id','sd','mean','min','max','abs_diff','high_var')])
-df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
+df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd_on>1 & sd_off>1,1,0))
+df_raw = df_raw %>% inner_join(df_params, by='param_set_id')
 
 # ------------
-df_raw_plot_nz = df_raw_plot_nz %>% inner_join(var_df, by='param_set_id')
-
-plot_param_vs_param(df_raw_plot_nz, "sd", "mean")
-plot_param_vs_param(df_raw_plot_nz, "sd", "min")
-
-plot_param_vs_param(df_raw_use, "rate_leak_commensal_injury", "mean")
-plot_param_vs_param(df_raw_use, "rate_leak_commensal_injury", "min")
-
-plot_param_vs_param(df_raw_use, "activity_engulf_M1_baseline", "abs_diff")
-plot_param_vs_param(df_raw_use, "active_age_limit", "sd")
+plot_param_vs_param(df_raw, "sd_on", "mean_on")
 
 # Filter for the two groups
-df_plot = df_raw_use %>%
+df_plot = df_raw %>%
   filter(high_var %in% c(0, 1)) %>%
   mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
 
-ggplot(df_plot, aes(x = mean, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
+library(ggplot2)
 
-ggplot(df_plot, aes(x = active_age_limit, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
+# vector of parameter names
+param_names = c(
+  "th_ROS_microbe",
+  "th_ROS_epith_recover",
+  "epith_recovery_chance",
+  "rat_com_pat_threshold",
+  "diffusion_speed_DAMPs",
+  "diffusion_speed_SAMPs",
+  "diffusion_speed_ROS",
+  "add_ROS",
+  "add_DAMPs",
+  "add_SAMPs",
+  "ros_decay",
+  "DAMPs_decay",
+  "SAMPs_decay",
+  "activation_threshold_DAMPs",
+  "activation_threshold_SAMPs",
+  "activity_engulf_M0_baseline",
+  "activity_engulf_M1_baseline",
+  "activity_engulf_M2_baseline",
+  "activity_ROS_M1_baseline",
+  "rate_leak_commensal_injury",
+  "rate_leak_pathogen_injury",
+  "rate_leak_commensal_baseline",
+  "active_age_limit",
+  "treg_discrimination_efficiency",
+  "mean_on", # mean over reps
+  "mean_off",# mean over reps
+  "mean_treg_on",
+  "mean_treg_off"
+)
 
-ggplot(df_plot, aes(x = log(activity_engulf_M1_baseline/activity_engulf_M2_baseline), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = (activity_engulf_M1_baseline-activity_engulf_M2_baseline), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = activity_engulf_M2_baseline, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = (SAMPs_decay-DAMPs_decay), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-# Low treg_discrimination_efficiency - Tregs can't distinguish commensals
-# This is actually more sophisticed and gives a bimodal dist. probably because 
-# too low leads to bad outcomes consistently, 
-# and too high leads to good outcomes consistently?
-
-ggplot(df_plot, aes(x = treg_discrimination_efficiency, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = (diffusion_speed_DAMPs), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = (activation_threshold_SAMPs), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = (SAMPs_decay), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-# ------- VERY CLEAR?
-ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = activation_threshold_SAMPs, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = SAMPs_decay, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-# ------- VERY CLEAR?
-ggplot(df_plot, aes(x = diffusion_speed_DAMPs, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = diffusion_speed_SAMPs, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-### epith_recovery_chance (line 769): If too low, injury never heals, commensal leakage persists
-ggplot(df_plot, aes(x = epith_recovery_chance, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-### recoevry in general?
-ggplot(df_plot, aes(x = th_ROS_epith_recover+epith_recovery_chance, fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-###### MORE COMPOSITE METRICS
-df_plot = df_plot %>% dplyr::mutate(DAMP_potential = (add_DAMPs / DAMPs_decay) / activation_threshold_DAMPs)
-df_plot = df_plot %>% dplyr::mutate(SAMP_potential = (add_SAMPs / SAMPs_decay) / activation_threshold_SAMPs)
-df_plot = df_plot %>% dplyr::mutate(Signal_Ratio = DAMP_potential / SAMP_potential)
-df_plot = df_plot %>% dplyr::mutate(ROS_potential = (activity_ROS_M1_baseline / ros_decay) / th_ROS_epith_recover)
-df_plot = df_plot %>% dplyr::mutate(Feedback_Strength = rate_leak_commensal_injury / epith_recovery_chance)
-df_plot = df_plot %>% dplyr::mutate(Chronicity_Risk = Signal_Ratio * log(1 + Feedback_Strength))
-df_plot = df_plot %>% dplyr::mutate(Inflammatory_Index = (add_DAMPs / DAMPs_decay / activation_threshold_DAMPs) /
-                                      (add_SAMPs / SAMPs_decay / activation_threshold_SAMPs))
-df_plot = df_plot %>% dplyr::mutate(Inflammatory_Index_Extended = Inflammatory_Index *
-                                      sqrt(diffusion_speed_SAMPs / diffusion_speed_DAMPs))
-df_plot = df_plot %>% dplyr::mutate(Instability_Score = Signal_Ratio *
-                                      ROS_potential *
-                                      (1 / epith_recovery_chance) *
-                                      rate_leak_commensal_injury *
-                                      exp(-2 * treg_discrimination_efficiency))
-
-
-
-ggplot(df_plot, aes(x = log(Instability_Score), fill = high_var)) +
-  geom_density(alpha = 0.5) +
-  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
-  theme_minimal()
-
-#----------------------------------
-pca_data = df_plot %>%
-  group_by(param_set_id) %>%
-  summarise(
-    standard_dev = sd,
-    add_DAMPs_norm = mean(add_DAMPs / DAMPs_decay),
-    add_SAMPs_norm = mean(add_SAMPs / SAMPs_decay),
-    inv_threshold_DAMPs = mean(1 / activation_threshold_DAMPs),
-    inv_threshold_SAMPs = mean(1 / activation_threshold_SAMPs),
-    diffusion_speed_DAMPs = mean(diffusion_speed_DAMPs),
-    diffusion_speed_SAMPs = mean(diffusion_speed_SAMPs),
-    rate_leak_commensal_injury = mean(rate_leak_commensal_injury),
-    inv_epith_recovery = mean(1 / epith_recovery_chance),
-    ROS_production = mean(activity_ROS_M1_baseline / ros_decay),
-    inv_ROS_threshold = mean(1 / th_ROS_epith_recover),
-    DAMPs_decay = mean(DAMPs_decay),
-    SAMPs_decay = mean(SAMPs_decay),
-    treg_discrimination = mean(treg_discrimination_efficiency),
-    .groups = 'drop'
+# loop over parameters
+dir_name = './param_histograms'
+dir.create(dir_name, showWarnings = FALSE)
+for (param in param_names) {
+  p = ggplot(df_plot, aes(x = .data[[param]], fill = high_var)) +
+    geom_density(alpha = 0.5, bw = 0.1) +
+    scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+    labs(x = param, title = paste("Density of", param)) +
+    theme_minimal()
+  ggsave(
+    filename = paste0(dir_name, "/", param, "_density.png"),
+    plot = p,
+    width = 9,
+    height = 6,
+    dpi = 300
   )
+}
 
-# Select parameters for PCA
-pca_matrix = pca_data %>%
-  select(add_DAMPs_norm, add_SAMPs_norm, inv_threshold_DAMPs, inv_threshold_SAMPs,
-         diffusion_speed_DAMPs, diffusion_speed_SAMPs,
-         rate_leak_commensal_injury, inv_epith_recovery,
-         ROS_production, inv_ROS_threshold, DAMPs_decay, SAMPs_decay,
-         treg_discrimination) %>%
-  as.matrix()
+df_plot_low_var   = df_plot %>% dplyr::filter(high_var=="Low Variance")
+df_plot_high_var  = df_plot %>% dplyr::filter(high_var=="High Variance")
 
-pca_result = prcomp(pca_matrix, scale. = TRUE, center = TRUE)
+table(df_plot$high_var)
 
-# Add PC scores to data
-pca_data$PC1 = pca_result$x[, 1]
-pca_data$PC2 = pca_result$x[, 2]
-pca_data$PC3 = pca_result$x[, 3]
+hist(df_plot_high_var$mean_treg_on)
 
-# Plot PCA biplot
-library(viridis)
+sort(unique(round(df_plot_high_var$mean_treg_on,1)))
+sort(unique(round(df_plot_low_var$mean_treg_on,1)))
 
-p_pca = ggplot(pca_data, aes(x = PC1, y = PC2, color = standard_dev)) +
-  geom_point(alpha = 0.6, size = 2) +
-  scale_color_viridis(name = "Chronic\nFraction", limits = c(0, 1)) +
-  theme_minimal() +
-  labs(title = "PCA: Parameter Space Colored by Chronic Outcome",
-       x = paste0("PC1 (", round(summary(pca_result)$importance[2, 1] * 100, 1), "% variance)"),
-       y = paste0("PC2 (", round(summary(pca_result)$importance[2, 2] * 100, 1), "% variance)"))
-p_pca
+saveRDS(df_plot,'df_plot_A13.rds')
+
