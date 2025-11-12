@@ -2,6 +2,7 @@ random_streams/
 random_numbers_seed_*.csv
 mass_sim_*/
 frames/
+frames_*/
 mass_sim_results_full_range_rnd/
 mass_sim_results_full_range_LHS/
 mass_sim_results/

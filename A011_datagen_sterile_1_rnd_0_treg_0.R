@@ -90,7 +90,7 @@ for(param_set_id_use in loop_over){
   random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
   stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
   stream_in_long     = c()
-  for(k in 1:150){
+  for(k in 1:200){
     stream_in_long = c(stream_in_long, stream_in)
   }
   print(length(stream_in_long))

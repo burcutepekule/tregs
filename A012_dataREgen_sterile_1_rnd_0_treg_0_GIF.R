@@ -8,14 +8,15 @@ library(gridExtra)
 library(grid)
 library(av)
 
-dir_name = './frames'
+dir_name = './frames_5091'
 dir.create(dir_name, showWarnings = FALSE)
 
 dir_name_data = './mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
 
 # Default values
-sterile_vec          = c(0,1) # 0 = infection, 1 = sterile injury
+# sterile_vec          = c(0,1) # 0 = infection, 1 = sterile injury
+sterile_vec          = c(1) # 0 = infection, 1 = sterile injury
 allow_tregs_vec      = c(0,1) # Allow tregs to do their job
 # randomize_tregs_vec  = c(0,1) # 0 = follow DAMPs, 1 = random movement
 randomize_tregs      = 0 # 0 = follow DAMPs, 1 = random movement
@@ -34,9 +35,9 @@ params_df = read.csv("./original_lhs_parameters.csv", stringsAsFactors = FALSE)
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
-t_max      = 2000
-plot_on    = 0
-plot_every = 25
+t_max      = 1000
+plot_on    = 1
+plot_every = 1
 grid_size  = 25
 n_phagocytes = round(grid_size * grid_size * 0.35)
 n_tregs = round(grid_size * grid_size * 0.35)
@@ -63,8 +64,8 @@ k_in = 0.044
 x0_in = 50
 shift_by = 10
 
-param_set_id_use   = 168 # 5091/2
-rep_vec            = 4
+param_set_id_use   = 5091 # 5091/2
+rep_vec            = 2
 random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
 stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 stream_in_long     = c()
@@ -141,11 +142,11 @@ longitudinal_df_5000 = longitudinal_df_keep
 
 df_treg   = longitudinal_df_5000 
 variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
-variables = 'commensal'
+variables = c('commensal','pathogen')
 variables = c(paste0("phagocyte_M1_L_", 0:5))
-variables = c(paste0("phagocyte_M2_L_", 0:5))
+# variables = c(paste0("phagocyte_M2_L_", 0:5))
 
-data_long = df_treg %>%
+data_long = df_treg %>% dplyr::filter(sterile==1) %>%
   dplyr::select(t, sterile, tregs_on, randomize_tregs, all_of(variables)) %>%
   pivot_longer(cols = all_of(variables), names_to = "variable", values_to = "value")
 

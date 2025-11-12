@@ -84,14 +84,14 @@ df_raw_use = df_raw_use %>% inner_join(df_params, by='param_set_id')
 # ------------
 df_raw_plot_nz = df_raw_plot_nz %>% inner_join(var_df, by='param_set_id')
 
-plot(df_raw_plot_nz$sd, df_raw_plot_nz$mean)
-abline(lm(mean ~ sd, data = df_raw_plot_nz), col = "red")
+plot_param_vs_param(df_raw_plot_nz, "sd", "mean")
+plot_param_vs_param(df_raw_plot_nz, "sd", "min")
 
-plot(df_raw_use$sd, df_raw_use$min)
-abline(lm(min ~ sd, data = df_raw_use), col = "red")
+plot_param_vs_param(df_raw_plot_nz, "rate_leak_commensal_injury", "mean")
+plot_param_vs_param(df_raw_plot_nz, "rate_leak_commensal_injury", "min")
 
-df_raw_plot_nz = df_raw_plot_nz %>% inner_join(df_params, by='param_set_id')
-plot(df_raw_plot_nz$activity_engulf_M1_baseline, df_raw_plot_nz$abs_diff)
+plot_param_vs_param(df_raw_plot_nz, "activity_engulf_M1_baseline", "abs_diff")
+plot_param_vs_param(df_raw_plot_nz, "active_age_limit", "sd")
 
 # Filter for the two groups
 df_plot = df_raw_use %>%
@@ -99,6 +99,11 @@ df_plot = df_raw_use %>%
   mutate(high_var = factor(high_var, labels = c("Low Variance", "High Variance")))
 
 ggplot(df_plot, aes(x = mean, fill = high_var)) +
+  geom_density(alpha = 0.5) +
+  scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
+  theme_minimal()
+
+ggplot(df_plot, aes(x = active_age_limit, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -154,7 +159,7 @@ ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
 
-ggplot(df_plot, aes(x = activation_threshold_DAMPs-activation_threshold_SAMPs, fill = high_var)) +
+ggplot(df_plot, aes(x = activation_threshold_SAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
@@ -179,7 +184,6 @@ ggplot(df_plot, aes(x = activation_threshold_DAMPs, fill = high_var)) +
   geom_density(alpha = 0.5) +
   scale_fill_manual(values = c("Low Variance" = "blue", "High Variance" = "red")) +
   theme_minimal()
-
 
 ### epith_recovery_chance (line 769): If too low, injury never heals, commensal leakage persists
 ggplot(df_plot, aes(x = epith_recovery_chance, fill = high_var)) +
