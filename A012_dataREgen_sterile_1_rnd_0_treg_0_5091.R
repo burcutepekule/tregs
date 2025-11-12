@@ -83,8 +83,13 @@ param_set_read = param_set_use %>%
     values_to = "value"
   ) %>% dplyr::select(-param_set_id)
 
-param_set_use$activity_engulf_M2_baseline=0.265 #even this is ok
+# param_set_use$activity_engulf_M2_baseline=0.265 #even this is ok
 # param_set_use$activity_engulf_M2_baseline=param_set_use$activity_engulf_M1_baseline
+
+# WEIRD?
+# higher activity_engulf_M1_baseline and lower activity_engulf_M2_baseline makes the tregs_ON case BETTER!
+# higher activity_engulf_M1_baseline and lower activity_engulf_M2_baseline makes the tregs_OFF case WORSE!
+
 
 longitudinal_df_keep = c()
 print(paste0('Processing param set ',param_set_id_use,' 😱'))
