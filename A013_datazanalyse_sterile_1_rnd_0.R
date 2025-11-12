@@ -18,8 +18,12 @@ df_raw    = readRDS('/Users/burcutepekule/Desktop/tregs/all_comparison_results_s
 length(unique(df_raw$param_set_id))
 df_params = read_csv('/Users/burcutepekule/Desktop/tregs/original_lhs_parameters.csv', show_col_types = FALSE)
 
+hist(df_raw$treg_off_score)
+hist(df_raw$treg_on_score)
+
 df_raw_keep = df_raw
 df_raw = df_raw %>% dplyr::filter(comparison=='Treg_OFF_ON' & injury_type==inj_type)
+hist(df_raw_keep$mean_diff)
 hist(df_raw_keep$mean_diff)
 
 #----- filter based on ss_start, it cannot be too large otherwise not much to compare!
@@ -67,6 +71,10 @@ var_df = df_raw_plot %>%
   summarise(
     variance = var(mean_diff),
     sd = sd(mean_diff),
+    sd_on = sd(treg_on_score),
+    sd_off = sd(treg_off_score),
+    mean_on = mean(treg_on_score),
+    mean_off = mean(treg_off_score),
     mean = mean(mean_diff),
     min = min(mean_diff),
     max = max(mean_diff),
@@ -75,6 +83,9 @@ var_df = df_raw_plot %>%
   ) %>%
   arrange(desc(variance))
 
+
+df_raw_2722 = df_raw %>% dplyr::filter(param_set_id==2722)
+df_raw_7509 = df_raw %>% dplyr::filter(param_set_id==7509)
 
 df_raw = df_raw %>% inner_join(var_df, by='param_set_id')
 df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd>1,1,0))

@@ -429,6 +429,19 @@ for (t in 1:t_max) {
   M1_indices = which(phagocyte_phenotype == 1)
   M2_indices = which(phagocyte_phenotype == 2)
   
+  if(keep_data_m==1){
+    ## KEEP TRACK
+    for(i in M0_indices){
+      engulfed_by_m0 = rbind(engulfed_by_m0, c(t, i, sum(phagocyte_bacteria_registry[i, ])))
+    }
+    for(i in M1_indices){
+      engulfed_by_m1 = rbind(engulfed_by_m1, c(t, i, sum(phagocyte_bacteria_registry[i, ])))
+    }
+    for(i in M2_indices){
+      engulfed_by_m2 = rbind(engulfed_by_m2, c(t, i, sum(phagocyte_bacteria_registry[i, ])))
+    }
+  }
+
   # Registry shifting every digestion_time steps
   if (t %% digestion_time == 0) {
     phagocyte_bacteria_registry = cbind(

@@ -33,9 +33,9 @@ params_df = read.csv("./original_lhs_parameters.csv", stringsAsFactors = FALSE)
 # ============================================================================
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
-t_max      = 500
-plot_on    = 1
-gif_on     = 1
+t_max      = 5000
+plot_on    = 0
+gif_on     = 0
 plot_every = 10
 grid_size  = 25
 n_phagocytes = round(grid_size * grid_size * 0.35)
@@ -61,10 +61,11 @@ act_radius_SAMPs = 1
 # Logistic function parameters (for epithelial injury calculation)
 k_in = 0.044
 x0_in = 50
-shift_by = 10
+# shift_by = 10
+shift_by = 10 #play with this to see whether it's really due to randomness
+# shift_by = 9, tregs better, shift_by=10, tregs worse, tregs=11, doesn't matter
 
-param_set_id_use   = 5091 # 5091/2
-rep_vec            = 2
+param_set_id_use   = 326 # 5091/2
 # random_stream_file = paste0("./random_streams/random_numbers_seed_",param_set_id_use,".csv")
 # stream_in          = scan(random_stream_file, quiet = TRUE, skip = 1)
 # stream_in_long     = c()
@@ -72,8 +73,10 @@ rep_vec            = 2
 #   stream_in_long = c(stream_in_long, stream_in)
 # }
 # print(length(stream_in_long))
-# saveRDS(stream_in_long, 'stream_in_long_5091.rds')
-stream_in_long = readRDS('stream_in_long_5091.rds')
+# saveRDS(stream_in_long, 'stream_in_long_326.rds')
+stream_in_long = readRDS('stream_in_long_326.rds')
+
+rep_vec            = 9 # 2 vs 9
 
 param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
 param_set_read = param_set_use %>%
@@ -85,15 +88,21 @@ param_set_read = param_set_use %>%
 
 # param_set_use$activity_engulf_M2_baseline=0.265 #even this is ok
 # param_set_use$activity_engulf_M2_baseline=param_set_use$activity_engulf_M1_baseline
-param_set_use$treg_discrimination_efficiency=1
+
+# param_set_use$activity_engulf_M1_baseline = 0.5
+# param_set_use$treg_discrimination_efficiency=1
 
 # WEIRD?
 # higher activity_engulf_M1_baseline and lower activity_engulf_M2_baseline makes the tregs_ON case BETTER!
 # higher activity_engulf_M1_baseline and lower activity_engulf_M2_baseline makes the tregs_OFF case WORSE!
 
-
 longitudinal_df_keep = c()
 print(paste0('Processing param set ',param_set_id_use,' 😱'))
+
+engulfed_by_m0_keep = c()
+engulfed_by_m1_keep = c()
+engulfed_by_m2_keep = c()
+keep_data_m         = 0
 
 for(sterile in sterile_vec){
   for(allow_tregs in allow_tregs_vec){
@@ -123,8 +132,35 @@ for(sterile in sterile_vec){
       
       source("./MISC/FAST_FUNCTIONS.R")
       source("./MISC/PLOT_FUNCTIONS.R")
+      
+      engulfed_by_m0 = c()
+      engulfed_by_m1 = c()
+      engulfed_by_m2 = c()
+      
       source("./MISC/RUN_SIM_IN_A012.R")
       
+      engulfed_by_m0             = as.data.frame(engulfed_by_m0)
+      if(dim(engulfed_by_m0)[1]>0){
+        engulfed_by_m0$rep         = reps_in
+        engulfed_by_m0$sterile     = sterile
+        engulfed_by_m0$allow_tregs = allow_tregs
+        engulfed_by_m0_keep        = rbind(engulfed_by_m0_keep, engulfed_by_m0) 
+      }
+      engulfed_by_m1             = as.data.frame(engulfed_by_m1)
+      if(dim(engulfed_by_m1)[1]>0){
+        engulfed_by_m1$rep         = reps_in
+        engulfed_by_m1$sterile     = sterile
+        engulfed_by_m1$allow_tregs = allow_tregs
+        engulfed_by_m1_keep        = rbind(engulfed_by_m1_keep, engulfed_by_m1)  
+      }
+      engulfed_by_m2             = as.data.frame(engulfed_by_m2)
+      if(dim(engulfed_by_m2)[1]>0){
+        engulfed_by_m2$rep         = reps_in
+        engulfed_by_m2$sterile     = sterile
+        engulfed_by_m2$allow_tregs = allow_tregs
+        engulfed_by_m2_keep        = rbind(engulfed_by_m2_keep, engulfed_by_m2)     
+      }
+
       # ============================================================================
       # CREATE VIDEO
       # ============================================================================
@@ -152,6 +188,8 @@ for(sterile in sterile_vec){
   }
 }
 colnames(longitudinal_df_keep)[c(7:37)] = colnames_insert
+
+
 
 longitudinal_df_5000 = longitudinal_df_keep
 
@@ -301,8 +339,27 @@ p_smooth_treg = ggplot(data_long, aes(x = t, y = value, color = variable, fill =
 
 pp=plot_grid(p_smooth_e, p_smooth_m_5, p_smooth_treg, nrow = 3, ncol = 1)
 
-ggsave("resp_3.png", pp, 
+ggsave(paste0("resp_",param_set_id_use,"_rep_",rep_vec,".png"), pp, 
        width = 10, 
        height = 12,  # Make it tall for 3 stacked plots
        dpi = 300)
 
+print(pp)
+
+if(keep_data_m==1){
+  colnames(engulfed_by_m0_keep)[1:3]=c('t','ind','sum')
+  colnames(engulfed_by_m1_keep)[1:3]=c('t','ind','sum')
+  colnames(engulfed_by_m2_keep)[1:3]=c('t','ind','sum')
+  
+  engulfed_by_m1_keep_plot = engulfed_by_m1_keep %>% dplyr::filter(t %in% c(10,seq(0,2000,100)))
+  ggplot(engulfed_by_m1_keep_plot, aes(x = factor(t), y = sum, fill = factor(allow_tregs))) +
+    geom_boxplot(outlier.size = 0.8, alpha = 0.7) +
+    labs(x = "Time (t)", y = "Sum", fill = "Allow Tregs") +
+    theme_minimal()
+  
+  engulfed_by_m2_keep_plot = engulfed_by_m2_keep %>% dplyr::filter(t %in% c(10,seq(0,2000,100)))
+  ggplot(engulfed_by_m2_keep_plot, aes(x = factor(t), y = sum, fill = factor(allow_tregs))) +
+    geom_boxplot(outlier.size = 0.8, alpha = 0.7) +
+    labs(x = "Time (t)", y = "Sum", fill = "Allow Tregs") +
+    theme_minimal()
+}
