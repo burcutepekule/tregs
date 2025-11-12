@@ -1,5 +1,6 @@
 random_streams/
 random_numbers_seed_*.csv
+stream_in_long_*.rds
 mass_sim_*/
 frames/
 frames_*/

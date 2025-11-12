@@ -8,8 +8,6 @@ library(gridExtra)
 library(grid)
 library(av)
 
-dir_name = './frames_5091'
-dir.create(dir_name, showWarnings = FALSE)
 
 dir_name_data = './mass_sim_results_R'
 dir.create(dir_name_data, showWarnings = FALSE)
@@ -36,7 +34,8 @@ params_df = read.csv("./original_lhs_parameters.csv", stringsAsFactors = FALSE)
 # FIXED PARAMETERS (not in CSV)
 # ============================================================================
 t_max      = 1000
-plot_on    = 1
+plot_on    = 0
+gif_on     = 0
 plot_every = 1
 grid_size  = 25
 n_phagocytes = round(grid_size * grid_size * 0.35)
@@ -75,18 +74,33 @@ for(k in 1:150){
 print(length(stream_in_long))
 
 param_set_use = params_df %>% dplyr::filter(param_set_id==param_set_id_use)
+param_set_read = param_set_use %>%
+  pivot_longer(
+    cols = -param_set_id,          # all columns except param_set_id
+    names_to = "variable_name",
+    values_to = "value"
+  ) %>% dplyr::select(-param_set_id)
+
+# param_set_use$activity_engulf_M1_baseline=param_set_use$activity_engulf_M2_baseline/4 #even this is ok
+# param_set_use$activity_engulf_M1_baseline=param_set_use$activity_engulf_M2_baseline
+
 longitudinal_df_keep = c()
 print(paste0('Processing param set ',param_set_id_use,' 😱'))
 
 for(sterile in sterile_vec){
   for(allow_tregs in allow_tregs_vec){
     # for (reps_in in 0:9){
+    
+    dir_name = paste0('./frames_',param_set_id_use,'_sterile_',sterile,'_tregs_',allow_tregs)
+    dir.create(dir_name, showWarnings = FALSE)
+    
     for (reps_in in rep_vec){
       print(c(sterile, allow_tregs, reps_in))
-      rm(list = setdiff(ls(),c("param_set_id_use","reps_in","stream_in_long","sterile_vec",
+      rm(list = setdiff(ls(),c("param_set_id_use","param_set_read",
+                               "reps_in","stream_in_long","sterile_vec",
                                "sterile","allow_tregs","randomize_tregs","allow_tregs_vec",
                                "use_synchronized_rng","params_df","param_set_use",
-                               "randomize_tregs_vec","rep_vec",
+                               "randomize_tregs_vec","rep_vec","gif_on",
                                "colnames_insert","longitudinal_df_keep",
                                "dir_name_data","dir_name","t_max","plot_on",
                                "plot_every","grid_size","n_phagocytes","n_tregs",
@@ -114,7 +128,7 @@ for(sterile in sterile_vec){
       video_out = paste0(dir_name, "/simulation_sterile", sterile, "_tregs_", allow_tregs,
                          "_trnd_", randomize_tregs, "_paramset_", param_set_id_use, ".mp4")
       
-      if (length(png_files) > 0) {
+      if (length(png_files) > 0 & gif_on==1) {
         av_encode_video(
           input = png_files,
           output = video_out,
@@ -142,8 +156,8 @@ longitudinal_df_5000 = longitudinal_df_keep
 
 df_treg   = longitudinal_df_5000 
 variables = c("epithelial_healthy", paste0("epithelial_inj_", 1:5))
-variables = c('commensal','pathogen')
-variables = c(paste0("phagocyte_M1_L_", 0:5))
+# variables = c('commensal','pathogen')
+# variables = c(paste0("phagocyte_M1_L_", 0:5))
 # variables = c(paste0("phagocyte_M2_L_", 0:5))
 
 data_long = df_treg %>% dplyr::filter(sterile==1) %>%
