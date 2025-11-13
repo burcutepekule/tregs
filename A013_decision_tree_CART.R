@@ -64,7 +64,7 @@ cart_purity = rpart(
                    class_weights["Low Variance"],
                    class_weights["High Variance"]),
   control = rpart.control(
-    cp = 0.02,
+    cp = 0.01,
     minsplit = 10,
     minbucket = 5,
     maxdepth = 10

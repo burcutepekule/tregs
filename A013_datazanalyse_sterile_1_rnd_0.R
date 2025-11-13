@@ -75,6 +75,22 @@ df_raw = df_raw %>% inner_join(var_df, by='param_set_id')
 df_raw = df_raw %>% dplyr::mutate(high_var = ifelse(sd_on>1 & sd_off>1,1,0))
 df_raw = df_raw %>% inner_join(df_params, by='param_set_id')
 
+
+df_raw_low_var   = df_raw %>% dplyr::filter(high_var==0)
+df_check_low_var = distinct(df_raw_low_var[c('param_set_id','mean','high_var')])
+hist(df_check_low_var$mean) #!!!! -> THERE ARE TREGS BEING USEFUL IN THE LOW VARIANCE CASES! NEGATIVES ARE INSIGNIFICANT!
+
+
+#### --- BE CAREFUL INTERPRETING HERE: THESE ARE THE "STABLE" CASES WITH LOW VARIATION
+#### --- THEY MIGHT NOT AGREE WITH THE HISTOGRAMS FOR DECIDING LOW/HIGH VARIATION BECAUSE THAT'S A DIFFERENT THING!
+#### --- 
+df_check_low_var    = df_check_low_var %>% inner_join(df_params, by='param_set_id')
+df_check_low_var_nz = df_check_low_var %>% dplyr::filter(mean>0)
+# VERY STRONG CORRELATION -> WHY ARE TREGS MORE USEFUL WHEN activation_threshold_DAMPs is low? 
+# Makes sense, that's when you need them?!
+plot_param_vs_param(df_check_low_var_nz,'activation_threshold_DAMPs','mean') 
+plot_param_vs_param(df_check_low_var_nz,'th_ROS_epith_recover','mean') # same goes for this too 
+
 # ------------
 plot_param_vs_param(df_raw, "sd_on", "mean_on")
 
