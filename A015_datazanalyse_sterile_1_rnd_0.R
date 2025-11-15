@@ -47,7 +47,7 @@ param_ids_check = df_summary$param_set_id
 
 df_raw_old    = readRDS('/Users/burcutepekule/Desktop/tregs/results_A13/all_comparison_results_A13_sterile_1_trnd_0.rds')
 
-df_plot = df_raw[c('param_set_id','replicate_id',
+df_plot = df_raw_old[c('param_set_id','replicate_id',
                    'ss_start_tregs_off','ss_start_tregs_on',
                    'mean_treg_on','mean_treg_off')]
 
@@ -73,7 +73,7 @@ df_summary = df_summary %>% dplyr::mutate(rounded_on_off_diff_mean = ifelse(
   0, mean_treg_on_off_diff_mean
 ))
 
-
+df_summary = df_summary %>% dplyr::filter(param_set_id %in% param_ids_check)
 
 
 
